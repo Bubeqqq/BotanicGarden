@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://bbyde5sksohkx"]
+
+[ext_resource type="Script" uid="uid://cormhnbxqsamo" path="res://Scripts/Render/WorldRender.cs" id="1_nsnmm"]
+[ext_resource type="Script" uid="uid://cglb3aafrshxo" path="res://Scripts/Camera/CameraMovement.cs" id="2_qcdiq"]
+
+[node name="World" type="Node3D" unique_id=1069929063]
+script = ExtResource("1_nsnmm")
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1958936380]
+script = ExtResource("2_qcdiq")
+
+[node name="Camera3D" type="Camera3D" parent="Player" unique_id=1806285765]
