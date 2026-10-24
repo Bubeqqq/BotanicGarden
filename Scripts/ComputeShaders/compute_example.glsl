@@ -113,4 +113,6 @@ void main() {
     }
 
     imageStore(output_img, position, new_value);
+    //imageStore(output_img, position, current_value);
+    
 }

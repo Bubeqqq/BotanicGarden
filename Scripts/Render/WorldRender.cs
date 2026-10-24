@@ -29,14 +29,14 @@ public partial class WorldRender : Node3D
     private Texture3Drd _displayTexB;
     private ShaderMaterial _material;
 
-    private List<MultiMeshInstance3D> _chunks = new();
-    private int _chunkWidth = 4, _chunkDepth = 4, _chunkHeight = 4;
+    private List<MeshInstance3D> _chunks = new();
+    private int _chunkWidth = 16, _chunkDepth = 16, _chunkHeight = 16;
     private int _chunkVoxelCount => _chunkWidth * _chunkDepth * _chunkHeight;
     
     private bool _useAtoB = true;
-    private int _gridWidth = 64, _gridDepth = 64, _gridHeight = 64;
+    private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 100;
     private Vector3 _workGroupSize = new Vector3(8, 4, 8);
-    private float _voxelSize = 1.0f;
+    private float _voxelSize = 0.1f;
     private float _spacing = 1.0f;
     private float _chunkSpacing = 1.0f;
     
@@ -90,7 +90,7 @@ public partial class WorldRender : Node3D
         SetupChunks();
         SetupPingPongBuffers();
         
-        AddComputeShader("res://Scripts/ComputeShaders/compute_example.glsl", false, 0.02f);
+        AddComputeShader("res://Scripts/ComputeShaders/compute_example.glsl", true, 0.02f);
 
 
         GD.Print("Done");
@@ -124,7 +124,7 @@ public partial class WorldRender : Node3D
 
     private void SetupMaterial()
     {
-        _material = new ShaderMaterial();
+        /*_material = new ShaderMaterial();
         _material.Shader = GD.Load<Shader>("res://Scripts/Render/voxel_material.gdshader");
         _material.SetShaderParameter("grid_width", _gridWidth);
         _material.SetShaderParameter("grid_depth", _gridDepth);
@@ -132,7 +132,12 @@ public partial class WorldRender : Node3D
         _material.SetShaderParameter("spacing", _spacing);
         _material.SetShaderParameter("voxel_size", _voxelSize);
         _material.SetShaderParameter("chunk_spacing", _chunkSpacing);
-        _material.SetShaderParameter("chunk_size", new Vector3I(_chunkWidth, _chunkHeight, _chunkDepth));
+        _material.SetShaderParameter("chunk_size", new Vector3I(_chunkWidth, _chunkHeight, _chunkDepth));*/
+        
+        _material = new ShaderMaterial();
+        _material.Shader = GD.Load<Shader>("res://Scripts/Render/dda_render.gdshader");
+        _material.SetShaderParameter("grid_size", new Vector3I(_chunkWidth, _chunkHeight, _chunkDepth));
+        _material.SetShaderParameter("box_size", new Vector3(_chunkWidth, _chunkHeight, _chunkDepth) * _voxelSize * _spacing);
     }
 
     private void SetupChunks()
@@ -140,22 +145,15 @@ public partial class WorldRender : Node3D
         var chunkCountX = Math.Ceiling((float)_gridWidth / _chunkWidth);
         var chunkCountY = Math.Ceiling((float)_gridHeight / _chunkHeight);
         var chunkCountZ = Math.Ceiling((float)_gridDepth / _chunkDepth);
-        
-        var meshData = new MultiMesh();
-        meshData.TransformFormat = MultiMesh.TransformFormatEnum.Transform3D;
-        meshData.UseColors = false;
-        meshData.InstanceCount = _chunkVoxelCount;
-        meshData.Mesh = new BoxMesh();
-        meshData.Mesh.SurfaceSetMaterial(0, _material);
 
-        for (int i = 0; i < _chunkVoxelCount; i++)
-        {
-            meshData.SetInstanceTransform(i, Transform3D.Identity);
-        }
-
-        meshData.CustomAabb = new Aabb(Vector3.Zero, new Vector3(_chunkWidth * _spacing, _chunkHeight * _spacing, _chunkDepth * _spacing));
         foreach (var chunk in _chunks) RemoveChild(chunk);
         _chunks.Clear();
+        
+        var dimensions = new Vector3(_chunkWidth, _chunkHeight, _chunkDepth) * _voxelSize * _spacing;
+        
+        var boxMesh = new BoxMesh();
+        boxMesh.Size = dimensions;
+        boxMesh.SurfaceSetMaterial(0, _material);
         
         for (var x = 0; x < chunkCountX; x++)
         {
@@ -163,16 +161,20 @@ public partial class WorldRender : Node3D
             {
                 for (var z = 0; z < chunkCountZ; z++)
                 {
-                    var multiMesh = new MultiMeshInstance3D();
-                    multiMesh.Position = new Vector3(x * _chunkWidth * _voxelSize * _spacing * _chunkSpacing, y *  _chunkHeight * _voxelSize * _spacing * _chunkSpacing, z * _chunkDepth * _voxelSize * _spacing * _chunkSpacing);
-                    multiMesh.Scale = new Vector3(_voxelSize, _voxelSize, _voxelSize);
-                    
-                    multiMesh.VisibilityRangeEnd = _renderDistance;
-                    multiMesh.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Disabled;
-                    
-                    multiMesh.Multimesh = meshData;
-                    AddChild(multiMesh);
-                    _chunks.Add(multiMesh);
+                    var chunkObj = new MeshInstance3D();
+                    chunkObj.Mesh = boxMesh;
+
+                    chunkObj.Position = new Vector3(
+                        x * _chunkWidth, 
+                        y * _chunkHeight, 
+                        z * _chunkDepth
+                    ) * _voxelSize * _spacing + (dimensions / 2.0f);
+                
+                    chunkObj.VisibilityRangeEnd = _renderDistance;
+                    chunkObj.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Disabled;
+                
+                    AddChild(chunkObj);
+                    _chunks.Add(chunkObj);
                 }
             }
         }
@@ -247,15 +249,27 @@ public partial class WorldRender : Node3D
         var initialData = new short[_voxelCount * 4];
         for (var i = 0; i < _voxelCount; i++)
         {
+            //rainbow
+            //initialData[idx] = (short)(i % 254 + 1);
+            var x = i % _gridWidth;
+            var y = (i / _gridWidth) % _gridHeight;
+            var z = i / (_gridWidth * _gridHeight);
+            
             var idx = i * 4;
 
-            initialData[idx] = 1;
+            if(y <= 3)
+                initialData[idx] = 6;
+            else if (y == 4 && x % 16 == 0 && z % 16 == 0)
+                initialData[idx] = 2;
+            else
+                initialData[idx] = 1;
+                    
             initialData[idx + 1] = 1;
             initialData[idx + 2] = 1;
             initialData[idx + 3] = 1;
         }
 
-        initialData[200000] = 2;
+        //initialData[200000] = 2;
         
         byte[] initialBytes = new byte[_voxelCount * 8];
         Buffer.BlockCopy(initialData, 0, initialBytes, 0, initialBytes.Length);
