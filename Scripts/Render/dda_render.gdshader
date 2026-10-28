@@ -5,6 +5,8 @@ uniform isampler3D image : filter_nearest, repeat_disable;
 uniform ivec3 grid_size = ivec3(128, 128, 128);
 uniform vec3 box_size = vec3(6.4, 6.4, 6.4);
 
+uniform sampler2D color_palette : source_color;
+
 varying vec3 local_camera_pos;
 varying vec3 local_vertex_pos;
 varying flat ivec3 chunk_global_origin;
@@ -76,7 +78,7 @@ void fragment() {
         discard;
     }
 
-    vec3 color = vec3(1.0);
+    /*vec3 color = vec3(1.0);
     if (hit_state == 2) {
         color = vec3(0.0, 1.0, 0.0);
     } else if (hit_state == 3) {
@@ -89,7 +91,12 @@ void fragment() {
         color = vec3(0.59, 0.29, 0.0);
     } else {
         color = vec3(1.0, 0.0, 0.0);
-    }
+    }*/
+    
+    int x = hit_state % 256;
+    int y = hit_state / 256;
+    
+    vec3 color = texelFetch(color_palette, ivec2(x, y), 0).rgb;
     
     //rainbow color
     //vec3 color = vec3(float(hit_state) / 255.0, 0.0, 1.0 - float(hit_state) / 255.0);

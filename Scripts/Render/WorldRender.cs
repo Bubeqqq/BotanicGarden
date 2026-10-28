@@ -1,85 +1,53 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-
-public struct ComputeShader
-{
-    public Rid Shader, Pipeline;
-
-    public Rid[] UniformSets;
-    
-    public byte[] PushConstant;
-    
-    public bool AddBarier;
-    
-    public Rid UniformSetAtoB, UniformSetBtoA;
-
-    public double Timer { get; set; }
-    public double TimePerSimulation;
-}
+using BotanicGarden.Scripts.Render;
 
 public partial class WorldRender : Node3D
 {
+    //Options
+    
+    //  -World size
+    private int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
+    private int _gridWidth = 1024, _gridDepth = 1024, _gridHeight = 32;
+    
+    //  -GPU
+    private Vector3 _workGroupSize = new Vector3(8, 4, 8);
+    
+    //  -Render
+    private float _voxelSize = 0.05f;
+    private float _renderDistance = 40.0f;
+    
+    //Calculations
+    
+    private int VoxelCount => _gridWidth * _gridDepth * _gridHeight;
+    private int ChunkVoxelCount => _chunkWidth * _chunkDepth * _chunkHeight;
+    
+    // Render
+    
+    private readonly List<MeshInstance3D> _chunks = [];
+    
+    private bool _useAtoB = true;
     private RenderingDevice _rd;
     private Rid _texA, _texB;
-
-    private List<ComputeShader> _computeShaders = new();
     
     private Texture3Drd _displayTexA;
     private Texture3Drd _displayTexB;
     private ShaderMaterial _material;
-
-    private List<MeshInstance3D> _chunks = new();
-    private int _chunkWidth = 16, _chunkDepth = 16, _chunkHeight = 16;
-    private int _chunkVoxelCount => _chunkWidth * _chunkDepth * _chunkHeight;
     
-    private bool _useAtoB = true;
-    private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 100;
-    private Vector3 _workGroupSize = new Vector3(8, 4, 8);
-    private float _voxelSize = 0.1f;
-    private float _spacing = 1.0f;
-    private float _chunkSpacing = 1.0f;
+    // Compute Shader
     
-    private int _voxelCount => _gridWidth * _gridDepth * _gridHeight;
-    
+    private Rid _shader, _pipeline;
+    private Rid[] _uniformSets;
+    private byte[] _pushConstant;
+    private Rid _uniformSetAtoB, _uniformSetBtoA;
     private double _timer = 0.0;
-
-    private float _renderDistance = 80.0f;
+    private double _timePerSimulation;
     
+    //--------------
     public override void _Ready()
     {
         GD.Print("Voxel Renderer");
-        
-        var player = GetNode<CharacterBody3D>("Player");
-        if (player is CameraMovement mv)
-        {
-            mv.ExpandChunks += () => {if (_chunkSpacing < 5) _chunkSpacing += 0.1f;UpdateSpacing();};
-            mv.ShrinkChunks += () => {
-                if (_chunkSpacing > 1.1f)
-                {
-                    _chunkSpacing -= 0.1f;
-                    UpdateSpacing();
-                }else if (_chunkSpacing != 1.0f)
-                {
-                    _chunkSpacing = 1f;
-                    UpdateSpacing();
-                }
-
-            };
-            mv.ExpandVoxels += () => {if (_spacing < 5) _spacing += 0.1f;UpdateSpacing();};
-            mv.ShrinkVoxels += () =>
-            {
-                if (_spacing > 1.1f)
-                {
-                    _spacing -= 0.1f;
-                    UpdateSpacing();
-                }else if (_spacing != 1.0f)
-                {
-                    _spacing = 1f;
-                    UpdateSpacing();
-                }
-            };
-        }
 
         SetBackground(new Color(0.1f, 0.15f, 0.25f));
         AddLight();
@@ -87,21 +55,14 @@ public partial class WorldRender : Node3D
         _rd = RenderingServer.GetRenderingDevice();
         
         SetupMaterial();
+        ApplyColorsAs2DTexture();
         SetupChunks();
         SetupPingPongBuffers();
         
-        AddComputeShader("res://Scripts/ComputeShaders/compute_example.glsl", true, 0.02f);
+        SetComputeShader("res://Scripts/ComputeShaders/compute_example.glsl", true, 0.02f);
 
 
         GD.Print("Done");
-    }
-
-    private void UpdateSpacing()
-    {
-        _material.SetShaderParameter("spacing", _spacing);
-        _material.SetShaderParameter("chunk_spacing", _chunkSpacing);
-        
-        SetupChunks();
     }
 
     private void AddLight()
@@ -137,7 +98,7 @@ public partial class WorldRender : Node3D
         _material = new ShaderMaterial();
         _material.Shader = GD.Load<Shader>("res://Scripts/Render/dda_render.gdshader");
         _material.SetShaderParameter("grid_size", new Vector3I(_chunkWidth, _chunkHeight, _chunkDepth));
-        _material.SetShaderParameter("box_size", new Vector3(_chunkWidth, _chunkHeight, _chunkDepth) * _voxelSize * _spacing);
+        _material.SetShaderParameter("box_size", new Vector3(_chunkWidth, _chunkHeight, _chunkDepth) * _voxelSize);
     }
 
     private void SetupChunks()
@@ -149,7 +110,7 @@ public partial class WorldRender : Node3D
         foreach (var chunk in _chunks) RemoveChild(chunk);
         _chunks.Clear();
         
-        var dimensions = new Vector3(_chunkWidth, _chunkHeight, _chunkDepth) * _voxelSize * _spacing;
+        var dimensions = new Vector3(_chunkWidth, _chunkHeight, _chunkDepth) * _voxelSize;
         
         var boxMesh = new BoxMesh();
         boxMesh.Size = dimensions;
@@ -168,7 +129,7 @@ public partial class WorldRender : Node3D
                         x * _chunkWidth, 
                         y * _chunkHeight, 
                         z * _chunkDepth
-                    ) * _voxelSize * _spacing + (dimensions / 2.0f);
+                    ) * _voxelSize + (dimensions / 2.0f);
                 
                     chunkObj.VisibilityRangeEnd = _renderDistance;
                     chunkObj.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Disabled;
@@ -180,7 +141,7 @@ public partial class WorldRender : Node3D
         }
     }
     
-    private void AddComputeShader(string computePath, bool addBarrierAfter, float timePerSimulation, Rid[] uniformSets = null, byte[] pushConstant = null)
+    private void SetComputeShader(string computePath, bool addBarrierAfter, float timePerSimulation, Rid[] uniformSets = null, byte[] pushConstant = null)
     {
         var shaderFile = GD.Load<RDShaderFile>(computePath);
         if (shaderFile == null)
@@ -212,19 +173,32 @@ public partial class WorldRender : Node3D
         uniformOutA.AddId(_texA);
         var uniformOut = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformInB, uniformOutA }, shader, 0);
         
-        var computeShader = new ComputeShader
-        {
-            Pipeline = pipeline, 
-            Shader = shader, 
-            AddBarier = addBarrierAfter,
-            PushConstant = pushConstant,
-            UniformSets = uniformSets,
-            UniformSetAtoB = uniformIn,
-            UniformSetBtoA = uniformOut,
-            TimePerSimulation = timePerSimulation
-        };
+        _pipeline = pipeline; 
+        _shader = shader;
+        _pushConstant = pushConstant;
+        _uniformSets = uniformSets;
+        _uniformSetAtoB = uniformIn;
+        _uniformSetBtoA = uniformOut;
+        _timePerSimulation = timePerSimulation;
+    }
+    
+    private void ApplyColorsAs2DTexture()
+    {
+        const int textureSize = 256;
+        var image = Image.CreateEmpty(textureSize, textureSize, false, Image.Format.Rgb8);
+        var colors = VoxelData.LoadColors();
         
-        _computeShaders.Add(computeShader);
+        for (var i = 0; i < ushort.MaxValue; i++)
+        {
+            var x = i % textureSize;
+            var y = i / textureSize;
+            
+            var color = new Color(colors[i].R,  colors[i].G, colors[i].B);
+            image.SetPixel(x, y, color);
+        }
+
+        var texture = ImageTexture.CreateFromImage(image);
+        _material.SetShaderParameter("color_palette", texture);
     }
 
     private void SetupPingPongBuffers()
@@ -246,8 +220,8 @@ public partial class WorldRender : Node3D
         // for (int i = 0; i < _voxelCount; i++) initialData[i] = GD.Randf();
 
         var randomNumber = new RandomNumberGenerator();
-        var initialData = new short[_voxelCount * 4];
-        for (var i = 0; i < _voxelCount; i++)
+        var initialData = new short[VoxelCount * 4];
+        for (var i = 0; i < VoxelCount; i++)
         {
             //rainbow
             //initialData[idx] = (short)(i % 254 + 1);
@@ -271,11 +245,11 @@ public partial class WorldRender : Node3D
 
         //initialData[200000] = 2;
         
-        byte[] initialBytes = new byte[_voxelCount * 8];
+        byte[] initialBytes = new byte[VoxelCount * 8];
         Buffer.BlockCopy(initialData, 0, initialBytes, 0, initialBytes.Length);
 
         _texA = _rd.TextureCreate(fmt, view, new Godot.Collections.Array<byte[]> { initialBytes });
-        _texB = _rd.TextureCreate(fmt, view, new Godot.Collections.Array<byte[]> { new byte[_voxelCount * 8] });
+        _texB = _rd.TextureCreate(fmt, view, new Godot.Collections.Array<byte[]> { new byte[VoxelCount * 8] });
 
         _displayTexA = new Texture3Drd() { TextureRdRid = _texA };
         _displayTexB = new Texture3Drd { TextureRdRid = _texB };
@@ -285,62 +259,47 @@ public partial class WorldRender : Node3D
     public override void _Process(double delta)
     {
         var computeList = _rd.ComputeListBegin();
-        bool gridChanged = false;
-        
-        for(var j = 0; j < _computeShaders.Count; j++)
+        _timer += delta;
+
+        if (_timer > _timePerSimulation)
         {
-            var shader = _computeShaders[j];
-            shader.Timer += delta;
+            _timer -= _timePerSimulation;
+            _pushConstant = BitConverter.GetBytes(GD.Randi());
+        }
+        else
+        {
+            return;
+        }
+        
+        _rd.ComputeListBindComputePipeline(computeList, _pipeline);
+        
+        var currentUniformSet = _useAtoB ? _uniformSetAtoB : _uniformSetBtoA;
+        _rd.ComputeListBindUniformSet(computeList, currentUniformSet, 0);
 
-            if (shader.Timer > shader.TimePerSimulation)
+        if (_uniformSets != null)
+        {
+            for (uint i = 0; i < _uniformSets.Length; i++)
             {
-                shader.Timer -= shader.TimePerSimulation;
-                shader.PushConstant = BitConverter.GetBytes(GD.Randi());
-                _computeShaders[j] = shader;
-            }
-            else
-            {
-                _computeShaders[j] = shader;
-                continue;
-            }
-
-            gridChanged = true;
-            _rd.ComputeListBindComputePipeline(computeList, shader.Pipeline);
-            
-            var currentUniformSet = _useAtoB ? shader.UniformSetAtoB : shader.UniformSetBtoA;
-            _rd.ComputeListBindUniformSet(computeList, currentUniformSet, 0);
-
-            if (shader.UniformSets != null)
-            {
-                for (uint i = 0; i < shader.UniformSets.Length; i++)
-                {
-                    _rd.ComputeListBindUniformSet(computeList, shader.UniformSets[i], i + 1);
-                }
-            }
-
-            if (shader.PushConstant is {Length: > 0})
-            {
-                _rd.ComputeListSetPushConstant(computeList, shader.PushConstant, (uint)shader.PushConstant.Length);
-            }
-            
-            _rd.ComputeListDispatch(computeList, 
-                (uint)Mathf.CeilToInt(_gridWidth / _workGroupSize.X), 
-                (uint)Mathf.CeilToInt(_gridHeight / _workGroupSize.Y), 
-                (uint)Mathf.CeilToInt(_gridDepth / _workGroupSize.Z));
-            
-            if (shader.AddBarier)
-            {
-                _rd.ComputeListAddBarrier(computeList);
+                _rd.ComputeListBindUniformSet(computeList, _uniformSets[i], i + 1);
             }
         }
+
+        if (_pushConstant is {Length: > 0})
+        {
+            _rd.ComputeListSetPushConstant(computeList, _pushConstant, (uint)_pushConstant.Length);
+        }
+        
+        _rd.ComputeListDispatch(computeList, 
+            (uint)Mathf.CeilToInt(_gridWidth / _workGroupSize.X), 
+            (uint)Mathf.CeilToInt(_gridHeight / _workGroupSize.Y), 
+            (uint)Mathf.CeilToInt(_gridDepth / _workGroupSize.Z));
+        
+        _rd.ComputeListAddBarrier(computeList);
         
         _rd.ComputeListEnd();
-
-        if (gridChanged)
-        {
-            _material.SetShaderParameter("image", _useAtoB ? _displayTexB : _displayTexA);
-            _useAtoB = !_useAtoB;
-        }
+        
+        _material.SetShaderParameter("image", _useAtoB ? _displayTexB : _displayTexA);
+        _useAtoB = !_useAtoB;
     }
     
     public override void _Notification(int what)
@@ -357,11 +316,9 @@ public partial class WorldRender : Node3D
                 _displayTexB.TextureRdRid = new Rid();
                 _rd.FreeRid(_texB);
             }
-
-            foreach (var shader in _computeShaders)
-            {
-                if(shader.Shader.IsValid) _rd.FreeRid(shader.Shader);
-            }
+            
+            if(_shader.IsValid) 
+                _rd.FreeRid(_shader);
         }
     }
 }
