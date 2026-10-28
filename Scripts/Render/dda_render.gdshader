@@ -74,24 +74,9 @@ void fragment() {
         map_pos += ivec3(mask) * ray_step;
     }
 
-    if (hit_state <= 1) {
+    if (hit_state < 1) {
         discard;
     }
-
-    /*vec3 color = vec3(1.0);
-    if (hit_state == 2) {
-        color = vec3(0.0, 1.0, 0.0);
-    } else if (hit_state == 3) {
-        color = vec3(0.0, 0.7, 0.2);
-    } else if (hit_state == 4) {
-        color = vec3(1.0, 1.0, 0.0);
-    } else if (hit_state == 5) {
-        color = vec3(1.0, 1.0, 1.0);
-    } else if (hit_state == 6) {
-        color = vec3(0.59, 0.29, 0.0);
-    } else {
-        color = vec3(1.0, 0.0, 0.0);
-    }*/
     
     int x = hit_state % 256;
     int y = hit_state / 256;

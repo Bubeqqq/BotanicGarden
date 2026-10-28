@@ -1,0 +1,21 @@
+ivec4 check_voxels_on_Y_axis(int y, int index, ivec4[3][3][3] neighbors){
+    for(int x = 0; x < 3; x++){
+        for(int z = 0; z < 3; z++){
+            if(neighbors[x][y][z].r == index){
+                return neighbors[x][y][z];
+            }
+        }
+    }
+    return ivec4(0, 0, 0, 0);
+}
+
+uint pcg_hash(uint seed) {
+    uint state = seed * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+float rand_fast(uvec3 pos, uint frame_seed) {
+    uint seed = pos.x * 1664525u + pos.y * 1013904223u + pos.z * 374761393u + frame_seed * 2246822519u;
+    return float(pcg_hash(seed)) * (1.0 / 4294967295.0);
+}

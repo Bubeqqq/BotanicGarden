@@ -26,6 +26,7 @@ project/assembly_name="BotanicGarden"
 
 [editor]
 
+script/search_in_file_extensions=PackedStringArray("gd", "cs", "gdshader", "glsl", "glslinc")
 version_control/plugin_name="GitPlugin"
 version_control/autoload_on_startup=true
 

@@ -1,0 +1,20 @@
+ivec4 calculate_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
+    ivec4 new_value = neighbors[1][1][1];
+
+    if(neighbors[1][1][1].r == 4096){
+        if(check_voxels_on_Y_axis(2, 4096, neighbors).r != 0){
+            float r = rand_fast(pos, seed);
+
+            if(r < 0.003f * float(neighbors[1][1][1].b)){
+                new_value.r = 4097;
+            }
+        }
+
+        if(check_voxels_on_Y_axis(2, 4098, neighbors).r != 0)
+        {
+            new_value.r = 4097;
+        }
+    }
+
+    return new_value;
+}

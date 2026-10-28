@@ -1,0 +1,29 @@
+ivec4 calculate_air(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
+	ivec4 new_value = neighbors[1][1][1];
+
+	if(check_voxels_on_Y_axis(1, 4098, neighbors).r != 0)
+	{
+		new_value.r = 4099;
+	}
+
+	if(check_voxels_on_Y_axis(2, 4098, neighbors).r != 0)
+	{
+		new_value.r = 4099;
+	}
+	
+	if(check_voxels_on_Y_axis(1, 4096, neighbors).r == 0){
+		ivec4 bottom = check_voxels_on_Y_axis(0, 4096, neighbors);
+		if(bottom.r != 0){
+			float r = rand_fast(pos, seed);
+			
+			if(r < 0.001){
+				new_value.r = 4096;
+				new_value.b = bottom.b + 1;
+			}else if(r > 1.0 - (0.0001 * float(neighbors[1][1][1].b))){
+				new_value.r = 4098;
+			}
+		}
+	}
+	
+	return new_value;
+}

@@ -59,7 +59,7 @@ public partial class WorldRender : Node3D
         SetupChunks();
         SetupPingPongBuffers();
         
-        SetComputeShader("res://Scripts/ComputeShaders/compute_example.glsl", true, 0.02f);
+        SetComputeShader("res://Scripts/ComputeShaders/Main_Shader.glsl", true, 0.02f);
 
 
         GD.Print("Done");
@@ -232,11 +232,11 @@ public partial class WorldRender : Node3D
             var idx = i * 4;
 
             if(y <= 3)
-                initialData[idx] = 6;
+                initialData[idx] = 2048;
             else if (y == 4 && x % 16 == 0 && z % 16 == 0)
-                initialData[idx] = 2;
+                initialData[idx] = 4096;
             else
-                initialData[idx] = 1;
+                initialData[idx] = 0;
                     
             initialData[idx + 1] = 1;
             initialData[idx + 2] = 1;

@@ -1,6 +1,11 @@
 #[compute]
 #version 450
 
+#include "res://Scripts/ComputeShaders/Common_Utils.glslinc"
+
+#include "res://Scripts/ComputeShaders/Air_Shader.glslinc"
+#include "res://Scripts/ComputeShaders/Flower_Shader.glslinc"
+
 layout(local_size_x = 8, local_size_y = 4, local_size_z = 8) in;
 
 layout(set = 0, binding = 0, rgba16i) uniform restrict readonly iimage3D input_img;
@@ -19,28 +24,6 @@ ivec4 get_voxel(ivec3 pos, ivec3 grid_size) {
 	return imageLoad(input_img, pos);
 }
 
-uint pcg_hash(uint seed) {
-	uint state = seed * 747796405u + 2891336453u;
-	uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-	return (word >> 22u) ^ word;
-}
-
-float rand_fast(uvec3 pos) {
-	uint seed = pos.x * 1664525u + pos.y * 1013904223u + pos.z * 374761393u + params.frame_seed * 2246822519u;;
-	return float(pcg_hash(seed)) * (1.0 / 4294967295.0);
-}
-
-ivec4 check_voxels_on_Y_axis(int y, int index, ivec4[3][3][3] neighbors){
-	for(int x = 0; x < 3; x++){
-		for(int z = 0; z < 3; z++){
-			if(neighbors[x][y][z].r == index){
-				return neighbors[x][y][z];
-			}
-		}
-	}
-	return ivec4(0, 0, 0, 0);
-}
-
 void main() {
 	ivec3 position = ivec3(gl_GlobalInvocationID.xyz);
 	ivec3 grid_size = imageSize(input_img);
@@ -48,19 +31,20 @@ void main() {
     if (position.x >= grid_size.x || position.y >= grid_size.y || position.z >= grid_size.z) { //if voxel is out of bounds
         return;
     }
-    
+  
 	ivec4 current_value = get_voxel(position, grid_size);
     uint type = (current_value.r >> 11u) & 0x1Fu; //type of voxel
-    uint index = current_value.r & 0x7FFu; //index in that type
-
+    //uint index = current_value.r & 0x7FFu; //index in that type
+    uint index = current_value.r; //index in that type
+    
     ivec4 new_value = ivec4(current_value.r, current_value.g, current_value.b ,current_value.a);
     
     //Types that don't requeire scanning
     
-    if(type == 0){ //statics
+    /*if(type == 0){ //statics
         imageStore(output_img, position, new_value);
         return;
-    }
+    }*/
     
     //types that requeire scanning
     ivec4 neighbors[3][3][3];
@@ -76,9 +60,12 @@ void main() {
             }
         }
     }
-    
-    if(type == 1){ //flowers
-        //new_value = flower(neighbors)
+    //11
+    if(type == 0){ // Special voxels
+        if(index == 0) //Air
+            new_value = calculate_air(neighbors, gl_GlobalInvocationID.xyz, params.frame_seed);
+    }else if(type == 2){
+        new_value = calculate_flower(neighbors, gl_GlobalInvocationID.xyz, params.frame_seed);
     }
 
     imageStore(output_img, position, new_value);
