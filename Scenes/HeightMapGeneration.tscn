@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://dj3ftbapapqio"]
+
+[ext_resource type="Script" uid="uid://c044pskwwv3bj" path="res://Scripts/HeightMap/DiamondSquareGenerator.cs" id="1_q4e01"]
+
+[node name="HeightMapGeneration" type="Node2D" unique_id=1696295769]
+
+[node name="Node2D" type="Node2D" parent="." unique_id=1741987193]
+
+[node name="Sprite2D" type="Sprite2D" parent="Node2D" unique_id=604813504]
+script = ExtResource("1_q4e01")
