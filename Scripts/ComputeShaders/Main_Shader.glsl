@@ -11,6 +11,10 @@ layout(local_size_x = 8, local_size_y = 4, local_size_z = 8) in;
 layout(set = 0, binding = 0, rgba16i) uniform restrict readonly iimage3D input_img;
 layout(set = 0, binding = 1, rgba16i) uniform restrict writeonly iimage3D output_img;
 
+/*layout(set = 0, binding = 2, std430) restrict buffer DataBuffer {
+    MyDataStruct dataArray[];
+};*/
+
 layout(push_constant, std430) uniform Params {
 	uint frame_seed;
 } params;
@@ -34,19 +38,18 @@ void main() {
   
 	ivec4 current_value = get_voxel(position, grid_size);
     uint type = (current_value.r >> 11u) & 0x1Fu; //type of voxel
-    //uint index = current_value.r & 0x7FFu; //index in that type
     uint index = current_value.r; //index in that type
     
     ivec4 new_value = ivec4(current_value.r, current_value.g, current_value.b ,current_value.a);
     
     //Types that don't requeire scanning
     
-    /*if(type == 0){ //statics
+    if(type == 1){ //statics
         imageStore(output_img, position, new_value);
         return;
-    }*/
+    }
     
-    //types that requeire scanning
+    //types that requeire scanning 
     ivec4 neighbors[3][3][3];
 
     for (int dx = -1; dx <= 1; dx++) {
@@ -62,65 +65,11 @@ void main() {
     }
     //11
     if(type == 0){ // Special voxels
-        if(index == 0) //Air
+        if(index == 0) // Air
             new_value = calculate_air(neighbors, gl_GlobalInvocationID.xyz, params.frame_seed);
-    }else if(type == 2){
+    }else if(type == 2){ // Plants
         new_value = calculate_flower(neighbors, gl_GlobalInvocationID.xyz, params.frame_seed);
     }
 
     imageStore(output_img, position, new_value);
-
-	/*ivec4 current_value = neighbors[1][1][1];
-
-	ivec4 up    = neighbors[1][2][1]; // y + 1
-	ivec4 down  = neighbors[1][0][1]; // y - 1
-	ivec4 right = neighbors[2][1][1]; // x + 1
-	ivec4 left  = neighbors[0][1][1]; // x - 1
-	ivec4 front = neighbors[1][1][2]; // z + 1
-	ivec4 back  = neighbors[1][1][0]; // z - 1
-
-	ivec4 new_value = ivec4(current_value.r, current_value.g, current_value.b ,current_value.a);
-
-	if(current_value.r == 1){
-		if(check_voxels_on_Y_axis(1, 4, neighbors).r != 0)
-		{
-			new_value.r = 5;
-		}
-
-		if(check_voxels_on_Y_axis(2, 4, neighbors).r != 0)
-		{
-			new_value.r = 5;
-		}
-
-		if(check_voxels_on_Y_axis(1, 2, neighbors).r == 0){
-			ivec4 bottom = check_voxels_on_Y_axis(0, 2, neighbors);
-			if(bottom.r != 0){
-				float r = rand_fast(gl_GlobalInvocationID.xyz);
-
-				if(r < 0.001f){
-					new_value.r = 2;
-					new_value.b = bottom.b + 1;
-				}else if(r > 1 - (0.0001f * float(current_value.b))){
-					new_value.r = 4;
-				}
-			}
-		}
-	}else if(current_value.r == 2){
-		if(check_voxels_on_Y_axis(2, 2, neighbors).r != 0){
-			float r = rand_fast(gl_GlobalInvocationID.xyz);
-
-			if(r < 0.003f * float(current_value.b)){
-				new_value.r = 3;
-			}
-		}
-
-		if(check_voxels_on_Y_axis(2, 4, neighbors).r != 0)
-		{
-			new_value.r = 3;
-		}
-	}
-
-	imageStore(output_img, position, new_value);
-	//imageStore(output_img, position, current_value);*/
-
 }

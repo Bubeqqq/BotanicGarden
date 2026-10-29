@@ -38,8 +38,6 @@ public partial class WorldRender : Node3D
     // Compute Shader
     
     private Rid _shader, _pipeline;
-    private Rid[] _uniformSets;
-    private byte[] _pushConstant;
     private Rid _uniformSetAtoB, _uniformSetBtoA;
     private double _timer = 0.0;
     private double _timePerSimulation;
@@ -59,7 +57,7 @@ public partial class WorldRender : Node3D
         SetupChunks();
         SetupPingPongBuffers();
         
-        SetComputeShader("res://Scripts/ComputeShaders/Main_Shader.glsl", true, 0.02f);
+        SetComputeShader("res://Scripts/ComputeShaders/Main_Shader.glsl", 0.02f);
 
 
         GD.Print("Done");
@@ -140,8 +138,16 @@ public partial class WorldRender : Node3D
             }
         }
     }
+
+    private void SetupComputeShaderData()
+    {
+        var flowerData = VoxelData.LoadStruct<FlowerData>("res://VoxelData/FlowerData.json");
+        var flowerByte = new byte[flowerData.Length * 16];
+        
+        Buffer.BlockCopy(flowerData, 0, flowerByte, 0, flowerByte.Length);
+    }
     
-    private void SetComputeShader(string computePath, bool addBarrierAfter, float timePerSimulation, Rid[] uniformSets = null, byte[] pushConstant = null)
+    private void SetComputeShader(string computePath, float timePerSimulation)
     {
         var shaderFile = GD.Load<RDShaderFile>(computePath);
         if (shaderFile == null)
@@ -159,6 +165,7 @@ public partial class WorldRender : Node3D
             return;
         }
 
+
         var pipeline = _rd.ComputePipelineCreate(shader);
         
         var uniformInA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
@@ -175,8 +182,6 @@ public partial class WorldRender : Node3D
         
         _pipeline = pipeline; 
         _shader = shader;
-        _pushConstant = pushConstant;
-        _uniformSets = uniformSets;
         _uniformSetAtoB = uniformIn;
         _uniformSetBtoA = uniformOut;
         _timePerSimulation = timePerSimulation;
@@ -218,8 +223,7 @@ public partial class WorldRender : Node3D
 
         // float[] initialData = new float[_voxelCount];
         // for (int i = 0; i < _voxelCount; i++) initialData[i] = GD.Randf();
-
-        var randomNumber = new RandomNumberGenerator();
+        
         var initialData = new short[VoxelCount * 4];
         for (var i = 0; i < VoxelCount; i++)
         {
@@ -264,7 +268,6 @@ public partial class WorldRender : Node3D
         if (_timer > _timePerSimulation)
         {
             _timer -= _timePerSimulation;
-            _pushConstant = BitConverter.GetBytes(GD.Randi());
         }
         else
         {
@@ -275,19 +278,9 @@ public partial class WorldRender : Node3D
         
         var currentUniformSet = _useAtoB ? _uniformSetAtoB : _uniformSetBtoA;
         _rd.ComputeListBindUniformSet(computeList, currentUniformSet, 0);
-
-        if (_uniformSets != null)
-        {
-            for (uint i = 0; i < _uniformSets.Length; i++)
-            {
-                _rd.ComputeListBindUniformSet(computeList, _uniformSets[i], i + 1);
-            }
-        }
-
-        if (_pushConstant is {Length: > 0})
-        {
-            _rd.ComputeListSetPushConstant(computeList, _pushConstant, (uint)_pushConstant.Length);
-        }
+        
+        var pushConstant = BitConverter.GetBytes(GD.Randi());
+        _rd.ComputeListSetPushConstant(computeList, pushConstant, (uint)pushConstant.Length);
         
         _rd.ComputeListDispatch(computeList, 
             (uint)Mathf.CeilToInt(_gridWidth / _workGroupSize.X), 

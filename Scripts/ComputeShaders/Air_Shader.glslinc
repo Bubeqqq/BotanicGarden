@@ -1,4 +1,4 @@
-ivec4 calculate_air(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
+ivec4 check_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
 	ivec4 new_value = neighbors[1][1][1];
 
 	if(check_voxels_on_Y_axis(1, 4098, neighbors).r != 0)
@@ -10,12 +10,12 @@ ivec4 calculate_air(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
 	{
 		new_value.r = 4099;
 	}
-	
+
 	if(check_voxels_on_Y_axis(1, 4096, neighbors).r == 0){
 		ivec4 bottom = check_voxels_on_Y_axis(0, 4096, neighbors);
 		if(bottom.r != 0){
 			float r = rand_fast(pos, seed);
-			
+
 			if(r < 0.001){
 				new_value.r = 4096;
 				new_value.b = bottom.b + 1;
@@ -24,6 +24,17 @@ ivec4 calculate_air(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
 			}
 		}
 	}
+
+	return new_value;
+}
+
+ivec4 calculate_air(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
+	ivec4 new_value = neighbors[1][1][1];
+
+	ivec4 flower = check_flower(neighbors, pos, seed);
+	
+	if(flower != new_value)
+		return flower;
 	
 	return new_value;
 }

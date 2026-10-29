@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -46,11 +47,11 @@ namespace BotanicGarden.Scripts.Render
     {
         public static VoxelColor[] LoadColors()
         {
-            using var file = Godot.FileAccess.Open("VoxelData/VoxelColors.json", Godot.FileAccess.ModeFlags.Read);
+            using var file = FileAccess.Open("VoxelData/VoxelColors.json", FileAccess.ModeFlags.Read);
             if (file == null)
             {
-                Godot.GD.PrintErr($"Nie można otworzyć pliku JSON: {Godot.FileAccess.GetOpenError()}");
-                return System.Array.Empty<VoxelColor>();
+                GD.PrintErr($"Nie można otworzyć pliku JSON: {FileAccess.GetOpenError()}");
+                return Array.Empty<VoxelColor>();
             }
 
             var jsonText = file.GetAsText();
@@ -61,18 +62,35 @@ namespace BotanicGarden.Scripts.Render
 
             foreach (var color in colors)
             {
-                result[color.index] = color;
+                result[color.Index] = color;
             }
 
 
             return result;
+        }
+        
+        public static T[] LoadStruct<T>(string path)
+        {
+            using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+            if (file == null)
+            {
+                GD.PrintErr($"Nie można otworzyć pliku JSON: {FileAccess.GetOpenError()}");
+                return Array.Empty<T>();
+            }
+
+            var jsonText = file.GetAsText();
+        
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var array = JsonSerializer.Deserialize<T[]>(jsonText, options);
+
+            return array;
         }
     }
 
     public struct VoxelColor
     {
         [JsonInclude]
-        public ushort index;
+        public ushort Index;
     
         [JsonInclude]
         public float R;
@@ -82,6 +100,12 @@ namespace BotanicGarden.Scripts.Render
     
         [JsonInclude]
         public float B;
+    }
+    
+    [StructLayout(LayoutKind.Sequential, Pack = 2)]
+    public struct FlowerData
+    {
+        public short s0, s1, s2, s3, s4, s5, s6, s7;
     }
 }
 
