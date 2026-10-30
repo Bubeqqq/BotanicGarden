@@ -81,6 +81,34 @@ namespace MyGame.Utils
             }
         }
 
+        public static void Add(this float[,] a, float v) => a.Add(v, a.GetLength(0), a.GetLength(1));
+
+        public static void Add(this float[,] a, float v, int width, int height)
+        {
+            CheckBounds(a, width, height);
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    a[x, y] += v;
+                }
+            }
+        }
+
+        public static void Multiply(this float[,] a, float v) => a.Multiply(v, a.GetLength(0), a.GetLength(1));
+
+        public static void Multiply(this float[,] a, float v, int width, int height)
+        {
+            CheckBounds(a, width, height);
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    a[x, y] *= v;
+                }
+            }
+        }
+
         private static void CheckBounds(float[,] a, int width, int height)
         {
             if (width <= 0 || width > a.GetLength(0)) throw new ArgumentOutOfRangeException(nameof(width));

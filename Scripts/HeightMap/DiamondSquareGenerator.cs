@@ -6,8 +6,8 @@ using System.Drawing;
 
 public partial class DiamondSquareGenerator : Sprite2D
 {
-    [Export] public int Width = 257;
-    [Export] public int Height = 257;
+    [Export] public int Width = (1 << 10) + 1;
+    [Export] public int Height = (1 << 9) + 1;
 
 
     private ImageTexture CreateTexture(float[,] arr)
@@ -77,31 +77,49 @@ public partial class DiamondSquareGenerator : Sprite2D
             {
                 arr[x, y] -= mean;
                 arr[x, y] *= multi / std;
-                arr[x, y] += 0.5f;
             }
         }
     }
 
-    private float[,] Generate(float multi = 1f)
+    /*
+    Params:
+        startIter
+            has to be a positive integer
+            controls how zoomed out the terrain feels, higher value - bigger zoom
+        multi
+            scales the noise by a factor; basically useless since we standardize the values later
+
+    Returns:
+        array with size at least [Width, Height]
+    
+    Other Notes:
+        Generating noise map with shape far from a square, with `startIter` higher than 0 can be optimized
+    */
+    public float[,] Generate(int startIter = 0, float multi = 1f)
     {
         int iter = (int) Math.Ceiling(Math.Log2(Math.Max(Width, Height)-1d));
-        int size = (int) (1 << iter) + 1;
+        int size = (1 << iter) + 1;
 
         var random = new RandomNumberGenerator();
         // random.Seed = 0;
 
         float[,] arr = new float[size, size];
-
+        
         // Init Corners
-        arr[     0,      0] = multi * random.RandfRange(-1f, 1f);
-        arr[     0, size-1] = multi * random.RandfRange(-1f, 1f);
-        arr[size-1,      0] = multi * random.RandfRange(-1f, 1f);
-        arr[size-1, size-1] = multi * random.RandfRange(-1f, 1f);
+        int startIncrement = 1 << (iter - startIter);
+        // GD.PrintS(startIter, iter, startIncrement);
+        for (int y = 0; y < size; y += startIncrement)
+        {
+            for (int x = 0; x < size; x += startIncrement)
+            {
+                arr[x, y] = random.RandfRange(-multi, multi);
+            }
+        }
 
         // Main Loop
-        for (int i = 0; i < iter; i++)
+        for (int i = startIter; i < iter; i++)
         {
-            int increment = (int) 1 << (iter-i);
+            int increment = 1 << (iter-i);
             int increment2 = increment / 2;
 
             // Stage 1
@@ -116,7 +134,7 @@ public partial class DiamondSquareGenerator : Sprite2D
                     int y = (t + b) / 2;
 
                     float a = (arr[l, t] + arr[r, t] + arr[l, b] + arr[r, b]) / 4f;
-                    float m = multi * random.RandfRange(-1f, 1f);
+                    float m = random.RandfRange(-multi, multi);
                     arr[x, y] = a + m;
                 }
             }
@@ -162,7 +180,7 @@ public partial class DiamondSquareGenerator : Sprite2D
                     }
 
                     float a = (lv + rv + tv + bv) / count;
-                    float m = multi * random.RandfRange(-1f, 1f);
+                    float m = random.RandfRange(-multi, multi);
                     arr[x, y] = a + m;
                 }
             }
@@ -173,8 +191,9 @@ public partial class DiamondSquareGenerator : Sprite2D
     }
     public override void _Ready()
     {
-        float[,] arr = Generate(1);
+        float[,] arr = Generate(2, 1f);
         Standardize(arr, .2f);
+        arr.Add(0.5f);
         arr.Clip(0f, 1f, Width, Height);
         Texture = CreateColorTexture(arr);
         // Texture = CreateTexture(arr);
