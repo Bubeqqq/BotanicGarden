@@ -52,10 +52,14 @@ public partial class WorldRender : Node3D
 	
 
 	private Rid _interactionShader, _interactionPipeline;
-private Rid _interactUniformSetA, _interactUniformSetB;
-private bool _interactionRequested = false;
-private InteractionPushConstant _interactionData;
+    private Rid _interactUniformSetA, _interactUniformSetB;
+    private bool _interactionRequested = false;
+    private InteractionPushConstant _interactionData;
 	//--------------
+    
+    // Compute Shader data Buffers
+    private Rid _voxelData;
+    
 	public override void _Ready()
 	{
 		GD.Print("Voxel Renderer");
@@ -70,39 +74,40 @@ private InteractionPushConstant _interactionData;
 		SetupChunks();
 		SetupPingPongBuffers();
 		
+        SetupComputeShaderData("res://VoxelData/VoxelData.json");
 		SetComputeShader("res://Scripts/ComputeShaders/Main_Shader.glsl", 0.02f);
 
 		SetupInteractionShader("res://Scripts/ComputeShaders/Interaction_Shader.glsl");
 		GD.Print("Done");
 	}
-private void SetupInteractionShader(string path)
-{
-	var shaderFile = GD.Load<RDShaderFile>(path);
-	_interactionShader = _rd.ShaderCreateFromSpirV(shaderFile.GetSpirV());
-	_interactionPipeline = _rd.ComputePipelineCreate(_interactionShader);
+    private void SetupInteractionShader(string path)
+    {
+	    var shaderFile = GD.Load<RDShaderFile>(path);
+	    _interactionShader = _rd.ShaderCreateFromSpirV(shaderFile.GetSpirV());
+	    _interactionPipeline = _rd.ComputePipelineCreate(_interactionShader);
 
-	
-	var uniformA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
-	uniformA.AddId(_texA);
-	_interactUniformSetA = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformA }, _interactionShader, 0);
+	    
+	    var uniformA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
+	    uniformA.AddId(_texA);
+	    _interactUniformSetA = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformA }, _interactionShader, 0);
 
-	var uniformB = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
-	uniformB.AddId(_texB);
-	_interactUniformSetB = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformB }, _interactionShader, 0);
-}
-public void RequestGpuRaycast(Vector3 start, Vector3 dir, float maxDist, int actionType)
-{
-	
-	start /= _voxelSize;
-	maxDist /= _voxelSize;
+	    var uniformB = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
+	    uniformB.AddId(_texB);
+	    _interactUniformSetB = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformB }, _interactionShader, 0);
+    }
+    public void RequestGpuRaycast(Vector3 start, Vector3 dir, float maxDist, int actionType)
+    {
+	    
+	    start /= _voxelSize;
+	    maxDist /= _voxelSize;
 
-	_interactionData = new InteractionPushConstant
-	{
-		StartX = start.X, StartY = start.Y, StartZ = start.Z, MaxDist = maxDist,
-		DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = actionType
-	};
-	_interactionRequested = true;
-}
+	    _interactionData = new InteractionPushConstant
+	    {
+		    StartX = start.X, StartY = start.Y, StartZ = start.Z, MaxDist = maxDist,
+		    DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = actionType
+	    };
+	    _interactionRequested = true;
+    }
 	private void AddLight()
 	{
 		var light = new DirectionalLight3D();
@@ -179,13 +184,12 @@ public void RequestGpuRaycast(Vector3 start, Vector3 dir, float maxDist, int act
 		}
 	}
 
-	private void SetupComputeShaderData()
+	private void SetupComputeShaderData(string path)
 	{
-		var flowerData = VoxelData.LoadStruct<FlowerData>("res://VoxelData/FlowerData.json");
-		var flowerByte = new byte[flowerData.Length * 16];
-		
-		Buffer.BlockCopy(flowerData, 0, flowerByte, 0, flowerByte.Length);
-	}
+		var voxelData = VoxelData.LoadStruct(path);
+        byte[] voxelByte = MemoryMarshal.AsBytes(voxelData.AsSpan()).ToArray();
+        _voxelData = _rd.StorageBufferCreate((uint)voxelByte.Length, voxelByte);
+    }
 	
 	private void SetComputeShader(string computePath, float timePerSimulation)
 	{
@@ -208,18 +212,21 @@ public void RequestGpuRaycast(Vector3 start, Vector3 dir, float maxDist, int act
 
 		var pipeline = _rd.ComputePipelineCreate(shader);
 		
+        var voxelDataUniform = new RDUniform { UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 2 };
+        voxelDataUniform.AddId(_voxelData);
+        
 		var uniformInA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
 		uniformInA.AddId(_texA);
 		var uniformOutB = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 1 };
 		uniformOutB.AddId(_texB);
-		var uniformIn = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformInA, uniformOutB }, shader, 0);
+		var uniformIn = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformInA, uniformOutB, voxelDataUniform}, shader, 0);
 
 		var uniformInB = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
 		uniformInB.AddId(_texB);
 		var uniformOutA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 1 };
 		uniformOutA.AddId(_texA);
-		var uniformOut = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformInB, uniformOutA }, shader, 0);
-		
+		var uniformOut = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformInB, uniformOutA, voxelDataUniform}, shader, 0);
+        
 		_pipeline = pipeline; 
 		_shader = shader;
 		_uniformSetAtoB = uniformIn;

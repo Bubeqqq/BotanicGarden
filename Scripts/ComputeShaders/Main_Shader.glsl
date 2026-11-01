@@ -3,21 +3,25 @@
 
 #include "res://Scripts/ComputeShaders/Common_Utils.glslinc"
 
-#include "res://Scripts/ComputeShaders/Air_Shader.glslinc"
-#include "res://Scripts/ComputeShaders/Flower_Shader.glslinc"
+struct MyDataStruct {
+    ivec4 packedData;
+};
 
 layout(local_size_x = 8, local_size_y = 4, local_size_z = 8) in;
 
 layout(set = 0, binding = 0, rgba16i) uniform restrict readonly iimage3D input_img;
 layout(set = 0, binding = 1, rgba16i) uniform restrict writeonly iimage3D output_img;
 
-/*layout(set = 0, binding = 2, std430) restrict buffer DataBuffer {
+layout(set = 0, binding = 2, std430) restrict buffer DataBuffer {
     MyDataStruct dataArray[];
-};*/
+};
 
 layout(push_constant, std430) uniform Params {
 	uint frame_seed;
 } params;
+
+#include "res://Scripts/ComputeShaders/Air_Shader.glslinc"
+#include "res://Scripts/ComputeShaders/Flower_Shader.glslinc"
 
 ivec4 get_voxel(ivec3 pos, ivec3 grid_size) {
 	if (pos.x < 0 || pos.x >= grid_size.x ||
@@ -63,7 +67,7 @@ void main() {
             }
         }
     }
-    //11
+    //111111
     if(type == 0){ // Special voxels
         if(index == 0) // Air
             new_value = calculate_air(neighbors, gl_GlobalInvocationID.xyz, params.frame_seed);
