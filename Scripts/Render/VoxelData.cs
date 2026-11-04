@@ -56,7 +56,7 @@ namespace BotanicGarden.Scripts.Render
 
             var jsonText = file.GetAsText();
         
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
             var colors = JsonSerializer.Deserialize<VoxelColor[]>(jsonText, options);
             var result = new VoxelColor[ushort.MaxValue];
 
@@ -80,7 +80,7 @@ namespace BotanicGarden.Scripts.Render
 
             var jsonText = file.GetAsText();
         
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
             var array = JsonSerializer.Deserialize<VoxelDataStructSave[]>(jsonText, options);
 
             var result = new VoxelDataStruct[ushort.MaxValue];

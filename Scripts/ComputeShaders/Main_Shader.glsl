@@ -1,8 +1,6 @@
 #[compute]
 #version 450
 
-#include "res://Scripts/ComputeShaders/Common_Utils.glslinc"
-
 struct MyDataStruct {
     ivec4 packedData;
 };
@@ -20,6 +18,10 @@ layout(push_constant, std430) uniform Params {
 	uint frame_seed;
 } params;
 
+// Tools
+#include "res://Scripts/ComputeShaders/Common_Utils.glslinc"
+
+// Shaders for computations
 #include "res://Scripts/ComputeShaders/Air_Shader.glslinc"
 #include "res://Scripts/ComputeShaders/Flower_Shader.glslinc"
 
@@ -67,7 +69,7 @@ void main() {
             }
         }
     }
-    //111111
+    //1111111111111111111111111111111111111111111111111111111
     if(type == 0){ // Special voxels
         if(index == 0) // Air
             new_value = calculate_air(neighbors, gl_GlobalInvocationID.xyz, params.frame_seed);

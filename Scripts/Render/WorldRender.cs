@@ -17,7 +17,8 @@ public partial class WorldRender : Node3D
 	
 	//  -World size
 	private int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
-	private int _gridWidth = 1024, _gridDepth = 1024, _gridHeight = 32;
+	[Export]
+    private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 32;
 	
 	//  -GPU
 	private Vector3 _workGroupSize = new Vector3(8, 4, 8);
@@ -270,7 +271,8 @@ public partial class WorldRender : Node3D
 
 		// float[] initialData = new float[_voxelCount];
 		// for (int i = 0; i < _voxelCount; i++) initialData[i] = GD.Randf();
-		
+
+        var whichFlower = false;
 		var initialData = new short[VoxelCount * 4];
 		for (var i = 0; i < VoxelCount; i++)
 		{
@@ -283,10 +285,13 @@ public partial class WorldRender : Node3D
 			var idx = i * 4;
 
 			if(y <= 3)
-				initialData[idx] = 2048;
+				initialData[idx] = 6144;
 			else if (y == 4 && x % 16 == 0 && z % 16 == 0)
-				initialData[idx] = 4096;
-			else
+            {
+                initialData[idx] = whichFlower ? (short)4097 : (short)4102;
+                whichFlower = !whichFlower;
+            }
+            else
 				initialData[idx] = 0;
 					
 			initialData[idx + 1] = 1;

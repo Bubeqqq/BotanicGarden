@@ -1,7 +1,7 @@
 ivec4 check_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed, uint current_index){
 	ivec4 new_value = neighbors[1][1][1];
 
-	ivec4 rawInput = dataArray[current_index].packedData;
+	/*ivec4 rawInput = dataArray[current_index].packedData;
 	
 	int s0 = bitfieldExtract(rawInput.x, 0, 16);
 	int s1 = bitfieldExtract(rawInput.x, 16, 16);
@@ -13,33 +13,66 @@ ivec4 check_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed, uint current_
 	int s5 = bitfieldExtract(rawInput.z, 16, 16);
 
 	int s6 = bitfieldExtract(rawInput.w, 0, 16);
-	int s7 = bitfieldExtract(rawInput.w, 16, 16);
+	int s7 = bitfieldExtract(rawInput.w, 16, 16);*/
 
-	if(check_voxels_on_Y_axis(1, 4098, neighbors).r != 0)
+	int index = search_for_flower_on_Y_axis(neighbors, 1, 3).r;
+	if(index != 0) // check for center of flower, on the same level as the voxel
 	{
-		new_value.r = 4099;
+		int s2 = bitfieldExtract(dataArray[index].packedData.y, 0, 16); // flower leaf
+		new_value.r = s2;
 	}
 
-	if(check_voxels_on_Y_axis(2, 4098, neighbors).r != 0)
+	index = search_for_flower_on_Y_axis(neighbors, 2, 3).r;
+	if(index != 0) // check for center of flower, up the voxel
 	{
-		new_value.r = 4099;
+		int s2 = bitfieldExtract(dataArray[index].packedData.y, 0, 16); // flower leaf
+		new_value.r = s2;
 	}
 
-	if(check_voxels_on_Y_axis(1, 4096, neighbors).r == 0){
-		ivec4 bottom = check_voxels_on_Y_axis(0, 4096, neighbors);
+	if(search_for_flower_on_Y_axis(neighbors, 1, 1, 2).r == 0){ // check if the stalk have the space to grow
+		ivec4 bottom = search_for_flower_on_Y_axis(neighbors, 0, 1); // check for growable stalk under the voxel
 		if(bottom.r != 0){
+			ivec4 rawInput = dataArray[bottom.r].packedData;
+			int s3 = bitfieldExtract(rawInput.y, 16, 16); // center
+			
 			float r = rand_fast(pos, seed);
 
-			if(r < 0.001){
-				new_value.r = 4096;
+			if(r < 0.001){ //check for growth
+				new_value.r = bottom.r;
 				new_value.b = bottom.b + 1;
-			}else if(r > 1.0 - (0.0001 * float(neighbors[1][1][1].b))){
-				new_value.r = 4098;
+			}else if(r > 1.0 - (0.0001 * float(neighbors[1][1][1].b))){ // check for creating a flower center
+				new_value.r = s3;
 			}
 		}
 	}
 
 	return new_value;
+	
+//	if(check_voxels_on_Y_axis(1, 4098, neighbors).r != 0)
+//	{
+//		new_value.r = 4099;
+//	}
+//
+//	if(check_voxels_on_Y_axis(2, 4098, neighbors).r != 0)
+//	{
+//		new_value.r = 4099;
+//	}
+//
+//	if(check_voxels_on_Y_axis(1, 4096, neighbors).r == 0){
+//		ivec4 bottom = check_voxels_on_Y_axis(0, 4096, neighbors);
+//		if(bottom.r != 0){
+//			float r = rand_fast(pos, seed);
+//
+//			if(r < 0.001){
+//				new_value.r = 4096;
+//				new_value.b = bottom.b + 1;
+//			}else if(r > 1.0 - (0.0001 * float(neighbors[1][1][1].b))){
+//				new_value.r = 4098;
+//			}
+//		}
+//	}
+//
+//	return new_value;
 }
 
 ivec4 calculate_air(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
