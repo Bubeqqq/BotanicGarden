@@ -10,7 +10,7 @@ using System.Text.Json.Serialization;
     Type 0: 0-2047       - Special voxels (air, ...)
     Type 1: 2048-4095    - Static blocks
     Type 2: 4096-6143    - Flowers
-    Type 3: 6144-8191    -
+    Type 3: 6144-8191    - Falling blocks
     Type 4: 8192-10239   -
     Type 5: 10240-12287  -
     Type 6: 12288-14335  -

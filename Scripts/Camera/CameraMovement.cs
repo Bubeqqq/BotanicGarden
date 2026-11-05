@@ -129,7 +129,7 @@ public partial class CameraMovement : CharacterBody3D
 		else if (mouseButton.ButtonIndex == MouseButton.Right)
 		{
 			
-			worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, 4099); 
+			worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, 8192); 
 			GD.Print("Clicked right");
 		}
 	}

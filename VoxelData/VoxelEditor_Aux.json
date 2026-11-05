@@ -18,7 +18,8 @@
     "4106": "growable_roots_1",
     "4107": "roots_1",
     "4108": "growable_roots_2",
-    "4109": "roots"
+    "4109": "roots",
+    "8192": "Falling_voxel"
   },
   "groups": {
     "Kwiat1": [
@@ -45,7 +46,7 @@
     "1": "Static blocks",
     "2": "Flowers",
     "3": "Soils",
-    "4": "",
+    "4": "Falling_Blocks",
     "5": "",
     "6": "",
     "7": "",

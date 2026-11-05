@@ -18,13 +18,13 @@ public partial class WorldRender : Node3D
 	//  -World size
 	private int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
 	[Export]
-    private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 64;
+    private int _gridWidth = 64, _gridDepth = 64, _gridHeight = 64;
 	
 	//  -GPU
 	private Vector3 _workGroupSize = new Vector3(8, 4, 8);
 	
 	//  -Render
-	private float _voxelSize = 0.06f;
+	private float _voxelSize = 0.1f;
 	private float _renderDistance = 40.0f;
 	
 	//Calculations
@@ -295,7 +295,7 @@ public partial class WorldRender : Node3D
 				initialData[idx] = 6144;
 			else if (y == 16 && x % 16 == 0 && z % 16 == 0)
             {
-                initialData[idx] = whichFlower ? (short)4096 : (short)4101;
+                //initialData[idx] = whichFlower ? (short)4096 : (short)4101;
                 whichFlower = !whichFlower;
             }
             else

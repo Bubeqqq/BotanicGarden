@@ -1,4 +1,4 @@
-ivec4 check_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed, uint current_index){
+ivec4 check_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
 	ivec4 new_value = neighbors[1][1][1];
 
 	/*ivec4 rawInput = dataArray[current_index].packedData;
@@ -62,14 +62,43 @@ ivec4 check_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed, uint current_
 	return new_value;
 }
 
+ivec4 check_falling_blocks(ivec4[3][3][3] neighbors, uint seed){
+	ivec4 new_value = neighbors[1][1][1];
+	
+	uint type_above = (neighbors[1][2][1].r >> 11u) & 0x1Fu;
+	if (type_above == 4u) {
+		return neighbors[1][2][1];
+	}
+	
+	ivec2 dir = get_diagonal_dir(seed);
+	int src_x = 1 - dir.x;
+	int src_z = 1 - dir.y;
+
+	ivec4 diag_block = neighbors[src_x][2][src_z];
+	uint type_diag = (diag_block.r >> 11u) & 0x1Fu;
+	
+	if (type_diag == 4u && neighbors[src_x][1][src_z].r != 0) {
+		ivec4 rawInput = dataArray[diag_block.r].packedData;
+		int s1 = bitfieldExtract(rawInput.x, 16, 16);
+
+		if (s1 != 0) {
+			new_value = diag_block;
+		}
+	}
+
+	return new_value;
+}
+
 ivec4 calculate_air(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
-	ivec4 current_value = neighbors[1][1][1];
-	uint type = (current_value.r >> 11u) & 0x1Fu; //type of voxel
-	uint index = current_value.r; //index of voxel
+	ivec4 new_value = neighbors[1][1][1];
+
+	new_value = check_flower(neighbors, pos, seed);
 	
-	//if(type == 2){
-	return check_flower(neighbors, pos, seed, index);
-	//}
+	if(new_value.r != 0)
+		return new_value;
 	
-	//return current_value;
+	new_value = check_falling_blocks(neighbors, seed);
+	
+	return new_value;
+
 }

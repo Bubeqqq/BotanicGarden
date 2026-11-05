@@ -6,7 +6,8 @@
 [node name="World" type="Node3D" unique_id=1069929063]
 script = ExtResource("1_nsnmm")
 
-[node name="Player" type="CharacterBody3D" parent="." unique_id=1958936380]
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1958936380 node_paths=PackedStringArray("worldRender")]
 script = ExtResource("2_qcdiq")
+worldRender = NodePath("..")
 
 [node name="Camera3D" type="Camera3D" parent="Player" unique_id=1806285765]

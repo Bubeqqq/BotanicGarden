@@ -57,3 +57,13 @@ ivec4 search_for_flower_on_Y_axis(ivec4[3][3][3] neighbors, int y, int s0, int s
     }
     return ivec4(0, 0, 0, 0);
 }
+
+// Falling blocks
+
+ivec2 get_diagonal_dir(uint seed) {
+    uint dir = seed & 3u;
+    if (dir == 0u) return ivec2(1, 0);
+    if (dir == 1u) return ivec2(-1, 0);
+    if (dir == 2u) return ivec2(0, 1);
+    return ivec2(0, -1);
+}
