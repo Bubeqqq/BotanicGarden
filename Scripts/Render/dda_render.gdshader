@@ -11,6 +11,18 @@ varying vec3 local_camera_pos;
 varying vec3 local_vertex_pos;
 varying flat ivec3 chunk_global_origin;
 
+bool is_solid(int state) {
+    if (state <= 1 || state > 6143) {
+        return false;
+    }
+
+//     if (state <= 1) {
+//         return false;
+//     }
+    
+    return true;
+}
+
 void vertex() {
     mat4 inverse_pos = inverse(MODEL_MATRIX);
 
@@ -64,7 +76,7 @@ void fragment() {
         }
 
         int state = texelFetch(image, chunk_global_origin + map_pos, 0).r;
-        if (state > 1) { 
+        if (is_solid(state)) { 
             hit_state = state;
             break;
         }
@@ -74,7 +86,7 @@ void fragment() {
         map_pos += ivec3(mask) * ray_step;
     }
 
-    if (hit_state < 1) {
+    if (!is_solid(hit_state)) {
         discard;
     }
     

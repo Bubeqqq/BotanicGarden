@@ -18,13 +18,13 @@ public partial class WorldRender : Node3D
 	//  -World size
 	private int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
 	[Export]
-    private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 32;
+    private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 64;
 	
 	//  -GPU
 	private Vector3 _workGroupSize = new Vector3(8, 4, 8);
 	
 	//  -Render
-	private float _voxelSize = 0.05f;
+	private float _voxelSize = 0.06f;
 	private float _renderDistance = 40.0f;
 	
 	//Calculations
@@ -60,6 +60,7 @@ public partial class WorldRender : Node3D
     
     // Compute Shader data Buffers
     private Rid _voxelData;
+    private Rid _plantIndex;
     
 	public override void _Ready()
 	{
@@ -190,6 +191,9 @@ public partial class WorldRender : Node3D
 		var voxelData = VoxelData.LoadStruct(path);
         byte[] voxelByte = MemoryMarshal.AsBytes(voxelData.AsSpan()).ToArray();
         _voxelData = _rd.StorageBufferCreate((uint)voxelByte.Length, voxelByte);
+        
+        byte[] plantIndexByte = BitConverter.GetBytes((ushort)0);
+        _plantIndex = _rd.StorageBufferCreate((uint) plantIndexByte.Length, plantIndexByte);
     }
 	
 	private void SetComputeShader(string computePath, float timePerSimulation)
@@ -216,17 +220,20 @@ public partial class WorldRender : Node3D
         var voxelDataUniform = new RDUniform { UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 2 };
         voxelDataUniform.AddId(_voxelData);
         
+        var plantIndexUniform = new RDUniform { UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 3 };
+        plantIndexUniform.AddId(_plantIndex);
+        
 		var uniformInA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
 		uniformInA.AddId(_texA);
 		var uniformOutB = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 1 };
 		uniformOutB.AddId(_texB);
-		var uniformIn = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformInA, uniformOutB, voxelDataUniform}, shader, 0);
+		var uniformIn = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformInA, uniformOutB, voxelDataUniform, plantIndexUniform}, shader, 0);
 
 		var uniformInB = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
 		uniformInB.AddId(_texB);
 		var uniformOutA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 1 };
 		uniformOutA.AddId(_texA);
-		var uniformOut = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformInB, uniformOutA, voxelDataUniform}, shader, 0);
+		var uniformOut = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformInB, uniformOutA, voxelDataUniform, plantIndexUniform}, shader, 0);
         
 		_pipeline = pipeline; 
 		_shader = shader;
@@ -284,11 +291,11 @@ public partial class WorldRender : Node3D
 			
 			var idx = i * 4;
 
-			if(y <= 3)
+			if(y <= 15)
 				initialData[idx] = 6144;
-			else if (y == 4 && x % 16 == 0 && z % 16 == 0)
+			else if (y == 16 && x % 16 == 0 && z % 16 == 0)
             {
-                initialData[idx] = whichFlower ? (short)4097 : (short)4102;
+                initialData[idx] = whichFlower ? (short)4096 : (short)4101;
                 whichFlower = !whichFlower;
             }
             else

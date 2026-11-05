@@ -14,7 +14,11 @@
     "4102": "Growable_stalk_2",
     "4103": "stalk_2",
     "4104": "flower_center_2",
-    "4105": "flower_leaf"
+    "4105": "flower_leaf",
+    "4106": "growable_roots_1",
+    "4107": "roots_1",
+    "4108": "growable_roots_2",
+    "4109": "roots"
   },
   "groups": {
     "Kwiat1": [
@@ -22,14 +26,18 @@
       4097,
       4098,
       4099,
-      4100
+      4100,
+      4106,
+      4107
     ],
     "Kwiat2": [
       4101,
       4102,
       4103,
       4104,
-      4105
+      4105,
+      4108,
+      4109
     ]
   },
   "type_names": {
