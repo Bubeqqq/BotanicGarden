@@ -18,7 +18,7 @@ public partial class WorldRender : Node3D
 	//  -World size
 	private int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
 	[Export]
-    private int _gridWidth = 64, _gridDepth = 64, _gridHeight = 64;
+    private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 64;
 	
 	//  -GPU
 	private Vector3 _workGroupSize = new Vector3(8, 4, 8);
@@ -61,6 +61,11 @@ public partial class WorldRender : Node3D
     // Compute Shader data Buffers
     private Rid _voxelData;
     private Rid _plantIndex;
+    
+    //References
+
+    [Export]
+    private DiamondSquareGenerator _diamondSquareGenerator;
     
 	public override void _Ready()
 	{
@@ -276,9 +281,9 @@ public partial class WorldRender : Node3D
 		};
 		var view = new RDTextureView();
 
-		// float[] initialData = new float[_voxelCount];
-		// for (int i = 0; i < _voxelCount; i++) initialData[i] = GD.Randf();
-
+        var map = _diamondSquareGenerator.Generate();
+        _diamondSquareGenerator.Standardize_Min_Max(map);
+        
         var whichFlower = false;
 		var initialData = new short[VoxelCount * 4];
 		for (var i = 0; i < VoxelCount; i++)
@@ -291,16 +296,30 @@ public partial class WorldRender : Node3D
 			
 			var idx = i * 4;
 
-			if(y <= 15)
-				initialData[idx] = 6144;
-			else if (y == 16 && x % 16 == 0 && z % 16 == 0)
+            if ((int)(map[x, z] * _gridHeight) == y)
             {
-                //initialData[idx] = whichFlower ? (short)4096 : (short)4101;
+                initialData[idx] = 6144;
+            }
+            else if ((int)(map[x, z] * _gridHeight) + 1 == y && GD.Randf() < 0.003f)
+            {
+                initialData[idx] = whichFlower ? (short)4096 : (short)4101;
                 whichFlower = !whichFlower;
             }
             else
-				initialData[idx] = 0;
-					
+            {
+                initialData[idx] = 0;
+            }
+            
+			// if(y <= 15)
+			// 	initialData[idx] = 6144;
+			// else if (y == 16 && x % 16 == 0 && z % 16 == 0)
+   //          {
+   //              //initialData[idx] = whichFlower ? (short)4096 : (short)4101;
+   //              whichFlower = !whichFlower;
+   //          }
+   //          else
+			// 	initialData[idx] = 0;
+			// 		
 			initialData[idx + 1] = 1;
 			initialData[idx + 2] = 1;
 			initialData[idx + 3] = 1;

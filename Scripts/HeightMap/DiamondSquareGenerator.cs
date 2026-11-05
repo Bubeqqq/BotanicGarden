@@ -66,7 +66,7 @@ public partial class DiamondSquareGenerator : Sprite2D
         return ImageTexture.CreateFromImage(img);
     }
 
-    private void Standardize(float[,] arr, float multi = 1f)
+    public void Standardize(float[,] arr, float multi = 1f)
     {
         float mean = arr.Mean(Width, Height);
         float std = arr.Std(Width, Height);
@@ -81,8 +81,23 @@ public partial class DiamondSquareGenerator : Sprite2D
             }
         }
     }
+    
+    public void Standardize_Min_Max(float[,] arr)
+    {
+        float min = ArrayExtensions.Min(arr);
+        float max = ArrayExtensions.Max(arr);
 
-    private float[,] Generate(float multi = 1f)
+        for (int y = 0; y < Height; y++)
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                arr[x, y] -= min;
+                arr[x, y] /= max - min;
+            }
+        }
+    }
+
+    public float[,] Generate(float multi = 1f)
     {
         int iter = (int) Math.Ceiling(Math.Log2(Math.Max(Width, Height)-1d));
         int size = (int) (1 << iter) + 1;

@@ -98,6 +98,13 @@ void fragment() {
     //rainbow color
     //vec3 color = vec3(float(hit_state) / 255.0, 0.0, 1.0 - float(hit_state) / 255.0);
 
+    if (mask == vec3(0.0)) mask = vec3(0.0, 1.0, 0.0);
+
+    // Cieniowanie ścianek zależnie od osi (X, Y, Z)
     float shade = mask.x * 0.8 + mask.y * 1.0 + mask.z * 0.6;
-    ALBEDO = color;
+
+    // Trójwymiarowa szachownica (co drugi voksel jest o 8% ciemniejszy, zero artefaktów)
+    float checker = float((map_pos.x + map_pos.y + map_pos.z) & 1) * 0.08;
+
+    ALBEDO = color * (shade);
 }
