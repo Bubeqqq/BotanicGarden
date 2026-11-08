@@ -7,8 +7,17 @@ public partial class CameraMovement : CharacterBody3D
 	[Export] public WorldRender worldRender;
 	
 	[Export] public float Sensitivity = 0.005f;
+	[Export] public int InteractionRadius = 10;
+	[Export] public float InteractionDensity = 0.5f;
+
+	[Export] public float RadiusChangeSpeed = 10.0f; 
+	[Export] public float DensityChangeSpeed = 0.2f;
+
+	[Export] public Label RadiusLabel;
+	[Export] public Label DensityLabel;
 
 	private Camera3D _camera;
+	private float _exactRadius;
 	
 	[Signal]
 	public delegate void ExpandChunksEventHandler();
@@ -71,6 +80,9 @@ public partial class CameraMovement : CharacterBody3D
 
 	public override void _Process(double delta)
 	{
+		bool uiNeedsUpdate = false;
+		float fDelta = (float)delta;
+
 		if (Input.IsActionJustPressed("i"))
 		{
 			EmitSignal(SignalName.ExpandChunks);
@@ -87,6 +99,41 @@ public partial class CameraMovement : CharacterBody3D
 		{
 			EmitSignal(SignalName.ShrinkVoxels);
 		}
+		if (Input.IsActionPressed("radius_up"))
+		{
+			_exactRadius += RadiusChangeSpeed * fDelta;
+			uiNeedsUpdate = true;
+		}
+		if (Input.IsActionPressed("radius_down"))
+		{
+			_exactRadius -= RadiusChangeSpeed * fDelta;
+			_exactRadius = Mathf.Max(0.0f, _exactRadius); 
+			uiNeedsUpdate = true;
+		}
+		
+		if (uiNeedsUpdate)
+		{
+			InteractionRadius = Mathf.RoundToInt(_exactRadius); 
+		}
+
+		
+		if (Input.IsActionPressed("density_up"))
+		{
+			InteractionDensity += DensityChangeSpeed * fDelta;
+			InteractionDensity = Mathf.Min(1.0f, InteractionDensity);
+			uiNeedsUpdate = true;
+		}
+		if (Input.IsActionPressed("density_down"))
+		{
+			InteractionDensity -= DensityChangeSpeed * fDelta;
+			InteractionDensity = Mathf.Max(0.0f, InteractionDensity);
+			uiNeedsUpdate = true;
+		}
+
+		if (uiNeedsUpdate)
+		{
+			UpdateUI();
+		}
 		if (worldRender != null)
 		{
 			Vector3 rayDir = -_camera.GlobalTransform.Basis.Z.Normalized();
@@ -99,7 +146,17 @@ public partial class CameraMovement : CharacterBody3D
 		Input.SetMouseMode(Input.MouseModeEnum.Captured);
 		
 		_camera = GetNode<Node3D>("Camera3D") as Camera3D;
+		_exactRadius = InteractionRadius;
+		UpdateUI();
 
+	}
+	private void UpdateUI()
+	{
+		if (RadiusLabel != null)
+			RadiusLabel.Text = $"Radius: {InteractionRadius}";
+			
+		if (DensityLabel != null)
+			DensityLabel.Text = $"Density: {InteractionDensity:F2}";
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -132,7 +189,7 @@ public partial class CameraMovement : CharacterBody3D
 		}
 		else if (mouseButton.ButtonIndex == MouseButton.Right)
 		{
-			worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, 4100, 10,0.5f); 
+			worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, 4100, InteractionRadius, InteractionDensity); 
 			GD.Print("Clicked right - AoE Place");
 		}
 	}

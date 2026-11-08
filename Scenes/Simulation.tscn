@@ -8,11 +8,40 @@
 script = ExtResource("1_nsnmm")
 _diamondSquareGenerator = NodePath("HeightMapGenerator")
 
-[node name="Player" type="CharacterBody3D" parent="." unique_id=1958936380 node_paths=PackedStringArray("worldRender")]
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1958936380 node_paths=PackedStringArray("worldRender", "RadiusLabel", "DensityLabel")]
 script = ExtResource("2_qcdiq")
 worldRender = NodePath("..")
+RadiusLabel = NodePath("CanvasLayer/MarginContainer/VBoxContainer/RadiusLabel")
+DensityLabel = NodePath("CanvasLayer/MarginContainer/VBoxContainer/DensityLabel")
 
 [node name="Camera3D" type="Camera3D" parent="Player" unique_id=1806285765]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="Player" unique_id=695673944]
+
+[node name="MarginContainer" type="MarginContainer" parent="Player/CanvasLayer" unique_id=910595608]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -40.0
+offset_top = -40.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_bottom = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Player/CanvasLayer/MarginContainer" unique_id=733998981]
+layout_mode = 2
+
+[node name="RadiusLabel" type="Label" parent="Player/CanvasLayer/MarginContainer/VBoxContainer" unique_id=1009781044]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="DensityLabel" type="Label" parent="Player/CanvasLayer/MarginContainer/VBoxContainer" unique_id=680338947]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 24
 
 [node name="HeightMapGenerator" type="Sprite2D" parent="." unique_id=827734822]
 script = ExtResource("3_qcdiq")
