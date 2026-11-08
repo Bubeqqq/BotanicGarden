@@ -8,8 +8,12 @@ using BotanicGarden.Scripts.Render;
 public struct InteractionPushConstant
 {
 	public float StartX, StartY, StartZ, MaxDist; 
-	public float DirX, DirY, DirZ;
+	public float DirX, DirY, DirZ;                
 	public int ActionType;                        
+	public int Radius;                           
+	public float Seed;                            
+	public float Density;                         
+	private float _pad0;                          
 }
 public partial class WorldRender : Node3D
 {
@@ -122,16 +126,18 @@ public partial class WorldRender : Node3D
 		uniformB_HL.AddId(_highlightTex);
 		_interactUniformSetB = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformB, uniformB_HL }, _interactionShader, 0);
 	}
-	public void RequestGpuRaycast(Vector3 start, Vector3 dir, float maxDist, int actionType)
+	public void RequestGpuRaycast(Vector3 start, Vector3 dir, float maxDist, int actionType, int radius = 0, float density = 1.0f)
 	{
-		
 		start /= _voxelSize;
 		maxDist /= _voxelSize;
 
 		_interactionData = new InteractionPushConstant
 		{
 			StartX = start.X, StartY = start.Y, StartZ = start.Z, MaxDist = maxDist,
-			DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = actionType
+			DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = actionType,
+			Radius = radius,
+			Seed = (float)GD.RandRange(0.0, 100.0),
+			Density = density
 		};
 		_interactionRequested = true;
 	}
@@ -444,7 +450,9 @@ public partial class WorldRender : Node3D
 		_highlightData = new InteractionPushConstant
 		{
 			StartX = start.X, StartY = start.Y, StartZ = start.Z, MaxDist = maxDist,
-			DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = -1 
+			DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = -1,
+			Radius = 0,
+			Seed = 0f
 		};
 		_highlightRequested = true;
 	}

@@ -11,7 +11,15 @@ layout(push_constant, std430) uniform Params {
     float max_dist;     
     vec3 ray_dir;       
     int action_type;    
+    int radius;
+    float seed;
+    float density;      
+    float pad0;
 } params;
+
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453123);
+}
 
 void main() {
     imageStore(highlight_map, ivec2(0, 0), uvec4(0u, 0u, 0u, 0u));
@@ -44,8 +52,44 @@ void main() {
                     imageStore(voxel_map, imap_pos, uvec4(0u, 0u, 0u, 0u));
                 } 
                 else if (params.action_type > 0) {
-                    if (all(greaterThanEqual(previous_pos, ivec3(0))) && all(lessThan(previous_pos, grid_size))) {
-                        imageStore(voxel_map, previous_pos, uvec4(uint(params.action_type), 1u, 1u, 1u));
+                    if (params.radius <= 0) {
+                        if (all(greaterThanEqual(previous_pos, ivec3(0))) && all(lessThan(previous_pos, grid_size))) {
+                            imageStore(voxel_map, previous_pos, uvec4(uint(params.action_type), 1u, 1u, 1u));
+                        }
+                    } else {
+                        int r = params.radius;
+                        for (int dx = -r; dx <= r; dx++) {
+                            for (int dz = -r; dz <= r; dz++) {
+                                if (dx*dx + dz*dz > r*r) continue;
+                                
+                                int place_x = imap_pos.x + dx;
+                                int place_z = imap_pos.z + dz;
+                                
+                                if (hash(vec2(place_x, place_z) + params.seed) > params.density) continue;
+                                
+                                if (place_x < 0 || place_x >= grid_size.x || place_z < 0 || place_z >= grid_size.z) continue;
+                                
+                                int start_y = min(imap_pos.y + r + 2, grid_size.y - 1);
+                                int end_y = max(imap_pos.y - r - 2, 0);
+                                
+                                for (int y = start_y; y >= end_y; y--) {
+                                    ivec3 check_pos = ivec3(place_x, y, place_z);
+                                    uvec4 column_state = imageLoad(voxel_map, check_pos);
+
+                                    if (column_state.r > 1u) { 
+                                        ivec3 target_pos = ivec3(place_x, y + 1, place_z);
+                                        
+                                        if (target_pos.y < grid_size.y) {
+                                            uvec4 upper_state = imageLoad(voxel_map, target_pos);
+                                            if (upper_state.r <= 1u) {
+                                                imageStore(voxel_map, target_pos, uvec4(uint(params.action_type), 1u, 1u, 1u));
+                                            }
+                                        }
+                                        break; 
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 break; 

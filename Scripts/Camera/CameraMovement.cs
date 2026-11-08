@@ -121,7 +121,7 @@ public partial class CameraMovement : CharacterBody3D
 		GD.Print("Clicked mouse button, raycast requested.");
 		Vector3 rayDir = -_camera.GlobalTransform.Basis.Z.Normalized();
 		Vector3 startPos = _camera.GlobalPosition;
-		float interactionRange = 20.0f; // lub z [Export]
+		float interactionRange = 20.0f; 
 
 		if (mouseButton.ButtonIndex == MouseButton.Left)
 		{
@@ -132,9 +132,8 @@ public partial class CameraMovement : CharacterBody3D
 		}
 		else if (mouseButton.ButtonIndex == MouseButton.Right)
 		{
-			
-			worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, 8192); 
-			GD.Print("Clicked right");
+			worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, 4100, 10,0.5f); 
+			GD.Print("Clicked right - AoE Place");
 		}
 	}
 	
