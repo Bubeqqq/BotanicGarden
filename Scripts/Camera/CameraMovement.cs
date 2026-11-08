@@ -87,6 +87,11 @@ public partial class CameraMovement : CharacterBody3D
 		{
 			EmitSignal(SignalName.ShrinkVoxels);
 		}
+		if (worldRender != null)
+		{
+			Vector3 rayDir = -_camera.GlobalTransform.Basis.Z.Normalized();
+			worldRender.UpdateHighlightRay(_camera.GlobalPosition, rayDir, 20.0f);
+		}
 	}
 
 	public override void _Ready()
@@ -99,7 +104,6 @@ public partial class CameraMovement : CharacterBody3D
 
 	public override void _UnhandledInput(InputEvent @event)
 {
-	// (Rotacja myszką - Twój obecny kod...)
 	if (@event is InputEventMouseMotion mouseMotion)
 	{
 		var rotation = _camera.Rotation;
@@ -109,7 +113,7 @@ public partial class CameraMovement : CharacterBody3D
 		_camera.Rotation = rotation;
 	}
 	
-	// Wywołanie raycastu na GPU po kliknięciu
+
 	if (@event is InputEventMouseButton mouseButton && mouseButton.Pressed)
 	{
 		

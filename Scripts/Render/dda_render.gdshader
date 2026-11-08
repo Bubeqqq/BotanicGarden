@@ -6,7 +6,7 @@ uniform ivec3 grid_size = ivec3(128, 128, 128);
 uniform vec3 box_size = vec3(6.4, 6.4, 6.4);
 
 uniform sampler2D color_palette : source_color;
-
+uniform usampler2D highlight_data;
 varying vec3 local_camera_pos;
 varying vec3 local_vertex_pos;
 varying flat ivec3 chunk_global_origin;
@@ -100,11 +100,19 @@ void fragment() {
 
     if (mask == vec3(0.0)) mask = vec3(0.0, 1.0, 0.0);
 
-    // Cieniowanie ścianek zależnie od osi (X, Y, Z)
     float shade = mask.x * 0.8 + mask.y * 1.0 + mask.z * 0.6;
 
-    // Trójwymiarowa szachownica (co drugi voksel jest o 8% ciemniejszy, zero artefaktów)
     float checker = float((map_pos.x + map_pos.y + map_pos.z) & 1) * 0.08;
 
     ALBEDO = color * (shade);
+
+
+    uvec4 hl = texelFetch(highlight_data, ivec2(0, 0), 0);
+    
+ 
+    bool is_highlighted = (hl.w == 1u) && (chunk_global_origin + map_pos == ivec3(hl.xyz));
+    
+    if (is_highlighted) {
+        ALBEDO = mix(ALBEDO, vec3(1.0, 1.0, 0.5), 0.35); 
+    }
 }

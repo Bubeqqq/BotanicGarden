@@ -18,7 +18,7 @@ public partial class WorldRender : Node3D
 	//  -World size
 	private int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
 	[Export]
-    private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 64;
+	private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 64;
 	
 	//  -GPU
 	private Vector3 _workGroupSize = new Vector3(8, 4, 8);
@@ -53,20 +53,25 @@ public partial class WorldRender : Node3D
 	
 
 	private Rid _interactionShader, _interactionPipeline;
-    private Rid _interactUniformSetA, _interactUniformSetB;
-    private bool _interactionRequested = false;
-    private InteractionPushConstant _interactionData;
+	private Rid _interactUniformSetA, _interactUniformSetB;
+	private bool _interactionRequested = false;
+	private InteractionPushConstant _interactionData;
 	//--------------
-    
-    // Compute Shader data Buffers
-    private Rid _voxelData;
-    private Rid _plantIndex;
-    
-    //References
+	
+	// Compute Shader data Buffers
+	private Rid _voxelData;
+	private Rid _plantIndex;
+	
+	//References
 
-    [Export]
-    private DiamondSquareGenerator _diamondSquareGenerator;
-    
+	//Block Highlight
+	private Rid _highlightTex;
+	private Texture2Drd _displayHighlightTex;
+	private bool _highlightRequested = false;
+	private InteractionPushConstant _highlightData;
+	[Export]
+	private DiamondSquareGenerator _diamondSquareGenerator;
+	
 	public override void _Ready()
 	{
 		GD.Print("Voxel Renderer");
@@ -81,40 +86,55 @@ public partial class WorldRender : Node3D
 		SetupChunks();
 		SetupPingPongBuffers();
 		
-        SetupComputeShaderData("res://VoxelData/VoxelData.json");
+		SetupComputeShaderData("res://VoxelData/VoxelData.json");
 		SetComputeShader("res://Scripts/ComputeShaders/Main_Shader.glsl", 0.02f);
 
 		SetupInteractionShader("res://Scripts/ComputeShaders/Interaction_Shader.glsl");
 		GD.Print("Done");
 	}
-    private void SetupInteractionShader(string path)
-    {
-	    var shaderFile = GD.Load<RDShaderFile>(path);
-	    _interactionShader = _rd.ShaderCreateFromSpirV(shaderFile.GetSpirV());
-	    _interactionPipeline = _rd.ComputePipelineCreate(_interactionShader);
+	private void SetupInteractionShader(string path)
+	{
+		var shaderFile = GD.Load<RDShaderFile>(path);
+		_interactionShader = _rd.ShaderCreateFromSpirV(shaderFile.GetSpirV());
+		_interactionPipeline = _rd.ComputePipelineCreate(_interactionShader);
 
-	    
-	    var uniformA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
-	    uniformA.AddId(_texA);
-	    _interactUniformSetA = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformA }, _interactionShader, 0);
+		var fmt = new RDTextureFormat {
+			Width = 1, Height = 1, Depth = 1,
+			Format = RenderingDevice.DataFormat.R16G16B16A16Uint,
+			UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit,
+			TextureType = RenderingDevice.TextureType.Type2D
+		};
+		_highlightTex = _rd.TextureCreate(fmt, new RDTextureView(), new Godot.Collections.Array<byte[]> { new byte[8] });
+		
+		_displayHighlightTex = new Texture2Drd { TextureRdRid = _highlightTex };
+		_material.SetShaderParameter("highlight_data", _displayHighlightTex); 
 
-	    var uniformB = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
-	    uniformB.AddId(_texB);
-	    _interactUniformSetB = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformB }, _interactionShader, 0);
-    }
-    public void RequestGpuRaycast(Vector3 start, Vector3 dir, float maxDist, int actionType)
-    {
-	    
-	    start /= _voxelSize;
-	    maxDist /= _voxelSize;
 
-	    _interactionData = new InteractionPushConstant
-	    {
-		    StartX = start.X, StartY = start.Y, StartZ = start.Z, MaxDist = maxDist,
-		    DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = actionType
-	    };
-	    _interactionRequested = true;
-    }
+		var uniformA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
+		uniformA.AddId(_texA);
+		var uniformA_HL = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 1 };
+		uniformA_HL.AddId(_highlightTex);
+		_interactUniformSetA = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformA, uniformA_HL }, _interactionShader, 0);
+
+		var uniformB = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
+		uniformB.AddId(_texB);
+		var uniformB_HL = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 1 };
+		uniformB_HL.AddId(_highlightTex);
+		_interactUniformSetB = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformB, uniformB_HL }, _interactionShader, 0);
+	}
+	public void RequestGpuRaycast(Vector3 start, Vector3 dir, float maxDist, int actionType)
+	{
+		
+		start /= _voxelSize;
+		maxDist /= _voxelSize;
+
+		_interactionData = new InteractionPushConstant
+		{
+			StartX = start.X, StartY = start.Y, StartZ = start.Z, MaxDist = maxDist,
+			DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = actionType
+		};
+		_interactionRequested = true;
+	}
 	private void AddLight()
 	{
 		var light = new DirectionalLight3D();
@@ -194,12 +214,12 @@ public partial class WorldRender : Node3D
 	private void SetupComputeShaderData(string path)
 	{
 		var voxelData = VoxelData.LoadStruct(path);
-        byte[] voxelByte = MemoryMarshal.AsBytes(voxelData.AsSpan()).ToArray();
-        _voxelData = _rd.StorageBufferCreate((uint)voxelByte.Length, voxelByte);
-        
-        byte[] plantIndexByte = BitConverter.GetBytes((ushort)0);
-        _plantIndex = _rd.StorageBufferCreate((uint) plantIndexByte.Length, plantIndexByte);
-    }
+		byte[] voxelByte = MemoryMarshal.AsBytes(voxelData.AsSpan()).ToArray();
+		_voxelData = _rd.StorageBufferCreate((uint)voxelByte.Length, voxelByte);
+		
+		byte[] plantIndexByte = BitConverter.GetBytes((ushort)0);
+		_plantIndex = _rd.StorageBufferCreate((uint) plantIndexByte.Length, plantIndexByte);
+	}
 	
 	private void SetComputeShader(string computePath, float timePerSimulation)
 	{
@@ -222,12 +242,12 @@ public partial class WorldRender : Node3D
 
 		var pipeline = _rd.ComputePipelineCreate(shader);
 		
-        var voxelDataUniform = new RDUniform { UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 2 };
-        voxelDataUniform.AddId(_voxelData);
-        
-        var plantIndexUniform = new RDUniform { UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 3 };
-        plantIndexUniform.AddId(_plantIndex);
-        
+		var voxelDataUniform = new RDUniform { UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 2 };
+		voxelDataUniform.AddId(_voxelData);
+		
+		var plantIndexUniform = new RDUniform { UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 3 };
+		plantIndexUniform.AddId(_plantIndex);
+		
 		var uniformInA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
 		uniformInA.AddId(_texA);
 		var uniformOutB = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 1 };
@@ -239,7 +259,7 @@ public partial class WorldRender : Node3D
 		var uniformOutA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 1 };
 		uniformOutA.AddId(_texA);
 		var uniformOut = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformInB, uniformOutA, voxelDataUniform, plantIndexUniform}, shader, 0);
-        
+		
 		_pipeline = pipeline; 
 		_shader = shader;
 		_uniformSetAtoB = uniformIn;
@@ -281,10 +301,10 @@ public partial class WorldRender : Node3D
 		};
 		var view = new RDTextureView();
 
-        var map = _diamondSquareGenerator.Generate();
-        _diamondSquareGenerator.Standardize_Min_Max(map);
-        
-        var whichFlower = false;
+		var map = _diamondSquareGenerator.Generate();
+		_diamondSquareGenerator.Standardize_Min_Max(map);
+		
+		var whichFlower = false;
 		var initialData = new short[VoxelCount * 4];
 		for (var i = 0; i < VoxelCount; i++)
 		{
@@ -296,20 +316,20 @@ public partial class WorldRender : Node3D
 			
 			var idx = i * 4;
 
-            if ((int)(map[x, z] * _gridHeight) == y)
-            {
-                initialData[idx] = 6144;
-            }
-            else if ((int)(map[x, z] * _gridHeight) + 1 == y && GD.Randf() < 0.003f)
-            {
-                initialData[idx] = whichFlower ? (short)4096 : (short)4101;
-                whichFlower = !whichFlower;
-            }
-            else
-            {
-                initialData[idx] = 0;
-            }
-            
+			if ((int)(map[x, z] * _gridHeight) == y)
+			{
+				initialData[idx] = 6144;
+			}
+			else if ((int)(map[x, z] * _gridHeight) + 1 == y && GD.Randf() < 0.003f)
+			{
+				initialData[idx] = whichFlower ? (short)4096 : (short)4101;
+				whichFlower = !whichFlower;
+			}
+			else
+			{
+				initialData[idx] = 0;
+			}
+			
 			// if(y <= 15)
 			// 	initialData[idx] = 6144;
 			// else if (y == 16 && x % 16 == 0 && z % 16 == 0)
@@ -353,27 +373,28 @@ public partial class WorldRender : Node3D
 		var computeList = _rd.ComputeListBegin();
 
 
-	if (_interactionRequested)
+	bool runInteract = _interactionRequested || _highlightRequested;
+	if (runInteract)
 	{
 		_rd.ComputeListBindComputePipeline(computeList, _interactionPipeline);
 		
-		// Zdecyduj, na której teksturze pracujemy (ta, która jest aktualnie odczytywana/wyświetlana)
 		var interactSet = _useAtoB ? _interactUniformSetA : _interactUniformSetB;
 		_rd.ComputeListBindUniformSet(computeList, interactSet, 0);
 
-		byte[] pushData = new byte[Marshal.SizeOf(_interactionData)];
+		var currentData = _interactionRequested ? _interactionData : _highlightData;
+
+		byte[] pushData = new byte[Marshal.SizeOf(currentData)];
 		IntPtr ptr = Marshal.AllocHGlobal(pushData.Length);
-		Marshal.StructureToPtr(_interactionData, ptr, true);
+		Marshal.StructureToPtr(currentData, ptr, true);
 		Marshal.Copy(ptr, pushData, 0, pushData.Length);
 		Marshal.FreeHGlobal(ptr);
 
 		_rd.ComputeListSetPushConstant(computeList, pushData, (uint)pushData.Length);
-		
-	
 		_rd.ComputeListDispatch(computeList, 1, 1, 1);
 		_rd.ComputeListAddBarrier(computeList); 
 
 		_interactionRequested = false;
+		_highlightRequested = false;
 	}
 		_rd.ComputeListBindComputePipeline(computeList, _pipeline);
 		
@@ -414,5 +435,17 @@ public partial class WorldRender : Node3D
 			if(_shader.IsValid) 
 				_rd.FreeRid(_shader);
 		}
+	}
+
+	public void UpdateHighlightRay(Vector3 start, Vector3 dir, float maxDist)
+	{
+		start /= _voxelSize;
+		maxDist /= _voxelSize;
+		_highlightData = new InteractionPushConstant
+		{
+			StartX = start.X, StartY = start.Y, StartZ = start.Z, MaxDist = maxDist,
+			DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = -1 
+		};
+		_highlightRequested = true;
 	}
 }
