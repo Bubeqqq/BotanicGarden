@@ -184,7 +184,7 @@ public partial class CameraMovement : CharacterBody3D
 		{
 			GD.Print("Clicked left");
 			
-			worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, 0); 
+			worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, 0, InteractionRadius);
 			
 		}
 		else if (mouseButton.ButtonIndex == MouseButton.Right)

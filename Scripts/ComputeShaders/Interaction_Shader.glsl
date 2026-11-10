@@ -50,8 +50,25 @@ void main() {
                 imageStore(highlight_map, ivec2(0, 0), uvec4(imap_pos.x, imap_pos.y, imap_pos.z, uint(params.radius + 1)));
 
                 if (params.action_type == 0) {
-                    imageStore(voxel_map, imap_pos, uvec4(0u, 0u, 0u, 0u));
-                } 
+                    if (params.radius <= 0) {
+                        imageStore(voxel_map, imap_pos, uvec4(0u, 0u, 0u, 0u));
+                    } else {
+                        int r = params.radius;
+                        for (int dx = -r; dx <= r; dx++) {
+                            for (int dy = -r; dy <= r; dy++) {
+                                for (int dz = -r; dz <= r; dz++) {
+                                    if (dx*dx + dy*dy + dz*dz > r*r) continue;
+                                    
+                                    ivec3 target_pos = imap_pos + ivec3(dx, dy, dz);
+                                    
+                                    if (all(greaterThanEqual(target_pos, ivec3(0))) && all(lessThan(target_pos, grid_size))) {
+                                        imageStore(voxel_map, target_pos, uvec4(0u, 0u, 0u, 0u));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 else if (params.action_type > 0) {
                     if (params.radius <= 0) {
                         if (all(greaterThanEqual(previous_pos, ivec3(0))) && all(lessThan(previous_pos, grid_size))) {
