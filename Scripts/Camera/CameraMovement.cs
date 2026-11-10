@@ -137,7 +137,7 @@ public partial class CameraMovement : CharacterBody3D
 		if (worldRender != null)
 		{
 			Vector3 rayDir = -_camera.GlobalTransform.Basis.Z.Normalized();
-			worldRender.UpdateHighlightRay(_camera.GlobalPosition, rayDir, 20.0f);
+			worldRender.UpdateHighlightRay(_camera.GlobalPosition, rayDir, 20.0f, InteractionRadius);
 		}
 	}
 

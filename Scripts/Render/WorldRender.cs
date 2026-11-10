@@ -443,7 +443,7 @@ public partial class WorldRender : Node3D
 		}
 	}
 
-	public void UpdateHighlightRay(Vector3 start, Vector3 dir, float maxDist)
+	public void UpdateHighlightRay(Vector3 start, Vector3 dir, float maxDist, int radius = 0)
 	{
 		start /= _voxelSize;
 		maxDist /= _voxelSize;
@@ -451,8 +451,9 @@ public partial class WorldRender : Node3D
 		{
 			StartX = start.X, StartY = start.Y, StartZ = start.Z, MaxDist = maxDist,
 			DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = -1,
-			Radius = 0,
-			Seed = 0f
+			Radius = radius,
+			Seed = 0f,
+			Density = 0f
 		};
 		_highlightRequested = true;
 	}

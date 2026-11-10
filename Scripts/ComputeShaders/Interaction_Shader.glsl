@@ -46,7 +46,8 @@ void main() {
             uvec4 state = imageLoad(voxel_map, imap_pos);
             
             if (state.r > 1u) { 
-                imageStore(highlight_map, ivec2(0, 0), uvec4(imap_pos.x, imap_pos.y, imap_pos.z, 1u));
+
+                imageStore(highlight_map, ivec2(0, 0), uvec4(imap_pos.x, imap_pos.y, imap_pos.z, uint(params.radius + 1)));
 
                 if (params.action_type == 0) {
                     imageStore(voxel_map, imap_pos, uvec4(0u, 0u, 0u, 0u));

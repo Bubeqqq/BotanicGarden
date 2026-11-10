@@ -109,8 +109,36 @@ void fragment() {
 
     uvec4 hl = texelFetch(highlight_data, ivec2(0, 0), 0);
     
- 
-    bool is_highlighted = (hl.w == 1u) && (chunk_global_origin + map_pos == ivec3(hl.xyz));
+    bool is_highlighted = false;
+    
+    if (hl.w > 0u) {
+        ivec3 center = ivec3(hl.xyz);
+        int r = int(hl.w) - 1; 
+        ivec3 current_voxel = chunk_global_origin + map_pos;
+        
+        int dx = current_voxel.x - center.x;
+        int dz = current_voxel.z - center.z;
+        int dy = abs(current_voxel.y - center.y);
+        
+        if (dy <= r + 2) {
+            int dist_sq = dx * dx + dz * dz;
+            int r_sq = r * r;
+            
+            if (dist_sq <= r_sq) {
+                bool is_center = (dist_sq == 0);
+                
+                bool is_border = 
+                    ((dx + 1) * (dx + 1) + dz * dz > r_sq) ||
+                    ((dx - 1) * (dx - 1) + dz * dz > r_sq) ||
+                    (dx * dx + (dz + 1) * (dz + 1) > r_sq) ||
+                    (dx * dx + (dz - 1) * (dz - 1) > r_sq);
+                
+                if (is_center || is_border) {
+                    is_highlighted = true;
+                }
+            }
+        }
+    }
     
     if (is_highlighted) {
         ALBEDO = mix(ALBEDO, vec3(1.0, 1.0, 0.5), 0.35); 
