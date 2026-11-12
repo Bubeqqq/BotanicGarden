@@ -10,7 +10,7 @@ using System.Text.Json.Serialization;
     Type 0: 0-2047       - Special voxels (air, ...)
     Type 1: 2048-4095    - Static blocks
     Type 2: 4096-6143    - Flowers
-    Type 3: 6144-8191    -
+    Type 3: 6144-8191    - Falling blocks
     Type 4: 8192-10239   -
     Type 5: 10240-12287  -
     Type 6: 12288-14335  -
@@ -56,7 +56,7 @@ namespace BotanicGarden.Scripts.Render
 
             var jsonText = file.GetAsText();
         
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
             var colors = JsonSerializer.Deserialize<VoxelColor[]>(jsonText, options);
             var result = new VoxelColor[ushort.MaxValue];
 
@@ -69,21 +69,38 @@ namespace BotanicGarden.Scripts.Render
             return result;
         }
         
-        public static T[] LoadStruct<T>(string path)
+        public static VoxelDataStruct[] LoadStruct(string path)
         {
             using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
             if (file == null)
             {
                 GD.PrintErr($"Nie można otworzyć pliku JSON: {FileAccess.GetOpenError()}");
-                return Array.Empty<T>();
+                return Array.Empty<VoxelDataStruct>();
             }
 
             var jsonText = file.GetAsText();
         
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var array = JsonSerializer.Deserialize<T[]>(jsonText, options);
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
+            var array = JsonSerializer.Deserialize<VoxelDataStructSave[]>(jsonText, options);
 
-            return array;
+            var result = new VoxelDataStruct[ushort.MaxValue];
+
+            foreach (var data in array)
+            {
+                result[data.index] = new VoxelDataStruct()
+                {
+                    s0 = data.s0,
+                    s1 = data.s1,
+                    s2 = data.s2,
+                    s3 = data.s3,
+                    s4 = data.s4,
+                    s5 = data.s5,
+                    s6 = data.s6,
+                    s7 = data.s7
+                };
+            }
+            
+            return result;
         }
     }
 
@@ -103,8 +120,16 @@ namespace BotanicGarden.Scripts.Render
     }
     
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
-    public struct FlowerData
+    public struct VoxelDataStruct
     {
+        public short s0, s1, s2, s3, s4, s5, s6, s7;
+    }
+    
+    
+    [StructLayout(LayoutKind.Sequential, Pack = 2)]
+    public struct VoxelDataStructSave
+    {
+        public short index;
         public short s0, s1, s2, s3, s4, s5, s6, s7;
     }
 }

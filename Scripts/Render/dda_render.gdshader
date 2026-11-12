@@ -6,10 +6,22 @@ uniform ivec3 grid_size = ivec3(128, 128, 128);
 uniform vec3 box_size = vec3(6.4, 6.4, 6.4);
 
 uniform sampler2D color_palette : source_color;
-
+uniform usampler2D highlight_data;
 varying vec3 local_camera_pos;
 varying vec3 local_vertex_pos;
 varying flat ivec3 chunk_global_origin;
+
+bool is_solid(int state) {
+//     if (state <= 1 || state > 6143) {
+//         return false;
+//     }
+
+    if (state <= 1) {
+        return false;
+    }
+    
+    return true;
+}
 
 void vertex() {
     mat4 inverse_pos = inverse(MODEL_MATRIX);
@@ -64,7 +76,7 @@ void fragment() {
         }
 
         int state = texelFetch(image, chunk_global_origin + map_pos, 0).r;
-        if (state > 1) { 
+        if (is_solid(state)) { 
             hit_state = state;
             break;
         }
@@ -74,7 +86,7 @@ void fragment() {
         map_pos += ivec3(mask) * ray_step;
     }
 
-    if (hit_state < 1) {
+    if (!is_solid(hit_state)) {
         discard;
     }
     
@@ -86,6 +98,49 @@ void fragment() {
     //rainbow color
     //vec3 color = vec3(float(hit_state) / 255.0, 0.0, 1.0 - float(hit_state) / 255.0);
 
+    if (mask == vec3(0.0)) mask = vec3(0.0, 1.0, 0.0);
+
     float shade = mask.x * 0.8 + mask.y * 1.0 + mask.z * 0.6;
-    ALBEDO = color;
+
+    float checker = float((map_pos.x + map_pos.y + map_pos.z) & 1) * 0.08;
+
+    ALBEDO = color * (shade);
+
+
+    uvec4 hl = texelFetch(highlight_data, ivec2(0, 0), 0);
+    
+    bool is_highlighted = false;
+    
+    if (hl.w > 0u) {
+        ivec3 center = ivec3(hl.xyz);
+        int r = int(hl.w) - 1; 
+        ivec3 current_voxel = chunk_global_origin + map_pos;
+        
+        int dx = current_voxel.x - center.x;
+        int dz = current_voxel.z - center.z;
+        int dy = abs(current_voxel.y - center.y);
+        
+        if (dy <= r + 2) {
+            int dist_sq = dx * dx + dz * dz;
+            int r_sq = r * r;
+            
+            if (dist_sq <= r_sq) {
+                bool is_center = (dist_sq == 0);
+                
+                bool is_border = 
+                    ((dx + 1) * (dx + 1) + dz * dz > r_sq) ||
+                    ((dx - 1) * (dx - 1) + dz * dz > r_sq) ||
+                    (dx * dx + (dz + 1) * (dz + 1) > r_sq) ||
+                    (dx * dx + (dz - 1) * (dz - 1) > r_sq);
+                
+                if (is_center || is_border) {
+                    is_highlighted = true;
+                }
+            }
+        }
+    }
+    
+    if (is_highlighted) {
+        ALBEDO = mix(ALBEDO, vec3(1.0, 1.0, 0.5), 0.35); 
+    }
 }

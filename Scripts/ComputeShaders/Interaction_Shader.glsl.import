@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bgd7ekcexh32q"
+path="res://.godot/imported/Interaction_Shader.glsl-2163ebf4d23feb3b365929254b9ef290.res"
+
+[deps]
+
+source_file="res://Scripts/ComputeShaders/Interaction_Shader.glsl"
+dest_files=["res://.godot/imported/Interaction_Shader.glsl-2163ebf4d23feb3b365929254b9ef290.res"]
+
+[params]
+

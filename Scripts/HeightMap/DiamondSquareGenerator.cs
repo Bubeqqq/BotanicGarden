@@ -6,8 +6,8 @@ using System.Drawing;
 
 public partial class DiamondSquareGenerator : Sprite2D
 {
-    [Export] public int Width = (1 << 10) + 1;
-    [Export] public int Height = (1 << 9) + 1;
+    [Export] public int Width = (1 << 8) + 1;
+    [Export] public int Height = (1 << 8) + 1;
 
 
     private ImageTexture CreateTexture(float[,] arr)
@@ -66,19 +66,44 @@ public partial class DiamondSquareGenerator : Sprite2D
         return ImageTexture.CreateFromImage(img);
     }
 
-    private void Standardize(float[,] arr, float multi = 1f)
+    public void Standardize(float[,] arr, float multi = 1f)
     {
         float mean = arr.Mean(Width, Height);
         float std = arr.Std(Width, Height);
 
-        for (int y = 0; y < Height; y++)
-        {
-            for (int x = 0; x < Width; x++)
-            {
-                arr[x, y] -= mean;
-                arr[x, y] *= multi / std;
-            }
-        }
+        arr.Subtract(mean, Width, Height);
+        arr.Multiply(multi/std, Width, Height);
+        arr.Add(0.5f, Width, Height);
+        arr.Clip(0f, 1f, Width, Height);
+
+        // for (int y = 0; y < Height; y++)
+        // {
+        //     for (int x = 0; x < Width; x++)
+        //     {
+        //         arr[x, y] -= mean;
+        //         arr[x, y] *= multi / std;
+        //     }
+        // }
+    }
+    
+    public void Standardize_Min_Max(float[,] arr)
+    {
+        float min = ArrayExtensions.Min(arr);
+        float max = ArrayExtensions.Max(arr);
+
+        arr.Subtract(min, Width, Height);
+        arr.Multiply(1f/(max-min), Width, Height);
+        // arr.Divide(max-min, Width, Height);
+        arr.Clip(0f, 1f, Width, Height);
+
+        // for (int y = 0; y < Height; y++)
+        // {
+        //     for (int x = 0; x < Width; x++)
+        //     {
+        //         arr[x, y] -= min;
+        //         arr[x, y] /= max - min;
+        //     }
+        // }
     }
 
     /*
@@ -192,9 +217,9 @@ public partial class DiamondSquareGenerator : Sprite2D
     public override void _Ready()
     {
         float[,] arr = Generate(2, 1f);
-        Standardize(arr, .2f);
-        arr.Add(0.5f);
-        arr.Clip(0f, 1f, Width, Height);
+        Standardize(arr, .18f);
+        // arr.Add(0.5f);
+        // arr.Clip(0f, 1f, Width, Height);
         Texture = CreateColorTexture(arr);
         // Texture = CreateTexture(arr);
         Centered = false;

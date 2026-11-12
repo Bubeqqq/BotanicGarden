@@ -95,6 +95,20 @@ namespace MyGame.Utils
             }
         }
 
+        public static void Subtract(this float[,] a, float v) => a.Subtract(v, a.GetLength(0), a.GetLength(1));
+
+        public static void Subtract(this float[,] a, float v, int width, int height)
+        {
+            CheckBounds(a, width, height);
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    a[x, y] -= v;
+                }
+            }
+        }
+
         public static void Multiply(this float[,] a, float v) => a.Multiply(v, a.GetLength(0), a.GetLength(1));
 
         public static void Multiply(this float[,] a, float v, int width, int height)
@@ -105,6 +119,20 @@ namespace MyGame.Utils
                 for (int x = 0; x < width; x++)
                 {
                     a[x, y] *= v;
+                }
+            }
+        }
+
+        public static void Divide(this float[,] a, float v) => a.Divide(v, a.GetLength(0), a.GetLength(1));
+
+        public static void Divide(this float[,] a, float v, int width, int height)
+        {
+            CheckBounds(a, width, height);
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    a[x, y] /= v;
                 }
             }
         }
