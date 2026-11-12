@@ -3,6 +3,10 @@ using System;
 
 public partial class CameraMovement : CharacterBody3D
 {
+	[Export] public ushort SelectedVoxelIndex = 4100;
+	[Export] public ColorRect SelectedBlockColor;
+	[Export] public Label SelectedBlockLabel;
+	public bool IsUiOpen = false;
 	[Export] public float Speed = 5;
 	[Export] public WorldRender worldRender;
 	
@@ -160,39 +164,44 @@ public partial class CameraMovement : CharacterBody3D
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
-{
-	if (@event is InputEventMouseMotion mouseMotion)
 	{
-		var rotation = _camera.Rotation;
-		rotation.X -= mouseMotion.Relative.Y * Sensitivity;
-		rotation.Y -= mouseMotion.Relative.X * Sensitivity;
-		rotation.X = Mathf.Clamp(rotation.X, Mathf.DegToRad(-89f), Mathf.DegToRad(89f));
-		_camera.Rotation = rotation;
-	}
-	
+		if (IsUiOpen) return;
 
-	if (@event is InputEventMouseButton mouseButton && mouseButton.Pressed)
-	{
-		
-		if (worldRender == null) return; 
-		GD.Print("Clicked mouse button, raycast requested.");
-		Vector3 rayDir = -_camera.GlobalTransform.Basis.Z.Normalized();
-		Vector3 startPos = _camera.GlobalPosition;
-		float interactionRange = 20.0f; 
-
-		if (mouseButton.ButtonIndex == MouseButton.Left)
+		if (@event is InputEventMouseMotion mouseMotion)
 		{
-			GD.Print("Clicked left");
-			
-			worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, 0, InteractionRadius);
-			
+			var rotation = _camera.Rotation;
+			rotation.X -= mouseMotion.Relative.Y * Sensitivity;
+			rotation.Y -= mouseMotion.Relative.X * Sensitivity;
+			rotation.X = Mathf.Clamp(rotation.X, Mathf.DegToRad(-89f), Mathf.DegToRad(89f));
+			_camera.Rotation = rotation;
 		}
-		else if (mouseButton.ButtonIndex == MouseButton.Right)
+
+		if (@event is InputEventMouseButton mouseButton && mouseButton.Pressed)
 		{
-			worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, 4100, InteractionRadius, InteractionDensity); 
-			GD.Print("Clicked right - AoE Place");
+			if (worldRender == null) return; 
+			Vector3 rayDir = -_camera.GlobalTransform.Basis.Z.Normalized();
+			Vector3 startPos = _camera.GlobalPosition;
+			float interactionRange = 20.0f; 
+
+			if (mouseButton.ButtonIndex == MouseButton.Left)
+			{
+				worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, 0, InteractionRadius);
+			}
+			else if (mouseButton.ButtonIndex == MouseButton.Right)
+			{
+				worldRender.RequestGpuRaycast(startPos, rayDir, interactionRange, SelectedVoxelIndex, InteractionRadius, InteractionDensity); 
+				GD.Print($"Clicked right - AoE Place (Index: {SelectedVoxelIndex})");
+			}
 		}
 	}
-	
-}
+	public void SetSelectedBlock(ushort index, string blockName, Color blockColor)
+	{
+		SelectedVoxelIndex = index;
+
+		if (SelectedBlockLabel != null)
+			SelectedBlockLabel.Text = $"{blockName} ({index})";
+
+		if (SelectedBlockColor != null)
+			SelectedBlockColor.Color = blockColor;
+	}
 }
