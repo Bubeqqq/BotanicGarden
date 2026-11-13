@@ -1,43 +1,43 @@
 using Godot;
-using MyGame.Utils;
-using System;
-using System.Diagnostics;
-using System.Drawing;
 
+// 2D preview of the diamond-square heightmap (Scenes/HeightMapGeneration.tscn).
+// The algorithm itself lives in DiamondSquare.cs.
 public partial class DiamondSquareGenerator : Sprite2D
 {
     [Export] public int Width = (1 << 8) + 1;
     [Export] public int Height = (1 << 8) + 1;
+    [Export] public int StartIter = 2;
+    [Export] public float StandardizeMulti = .18f;
 
 
     private ImageTexture CreateTexture(float[,] arr)
     {
         Image img = Image.CreateEmpty(Width, Height, false, Image.Format.Rgba8);
-        
+
         for (int y = 0; y < Height; y++)
         {
             for (int x = 0; x < Width; x++)
             {
                 float v = arr[x, y];
-                img.SetPixel(x, y, new Godot.Color(v, v, v));
+                img.SetPixel(x, y, new Color(v, v, v));
             }
         }
 
         return ImageTexture.CreateFromImage(img);
     }
 
-    private static readonly (float Low, float High, Godot.Color LowColor, Godot.Color HighColor)[] ColorBands =
+    private static readonly (float Low, float High, Color LowColor, Color HighColor)[] ColorBands =
     {
-        (0.00f, 0.40f, Godot.Color.Color8( 32,  21,  89), Godot.Color.Color8( 71, 185, 237)), // ocean
-        (0.40f, 0.42f, Godot.Color.Color8(230, 247, 255), Godot.Color.Color8(230, 247, 255)), // shore
-        (0.42f, 0.57f, Godot.Color.Color8( 57, 191,  73), Godot.Color.Color8(217, 217,  30)), // low-lands
-        (0.57f, 0.65f, Godot.Color.Color8(217, 217,  30), Godot.Color.Color8(201, 151,  24)), // mid-lands
-        (0.65f, 0.70f, Godot.Color.Color8(201, 151,  24), Godot.Color.Color8( 80,  80,  80)), // high-lands
-        (0.70f, 0.81f, Godot.Color.Color8( 80,  80,  80), Godot.Color.Color8(150, 150, 150)), // mountains
-        (0.81f, 1.01f, Godot.Color.Color8(180, 180, 180), Godot.Color.Color8(255, 255, 255)), // peaks
+        (0.00f, 0.40f, Color.Color8( 32,  21,  89), Color.Color8( 71, 185, 237)), // ocean
+        (0.40f, 0.42f, Color.Color8(230, 247, 255), Color.Color8(230, 247, 255)), // shore
+        (0.42f, 0.57f, Color.Color8( 57, 191,  73), Color.Color8(217, 217,  30)), // low-lands
+        (0.57f, 0.65f, Color.Color8(217, 217,  30), Color.Color8(201, 151,  24)), // mid-lands
+        (0.65f, 0.70f, Color.Color8(201, 151,  24), Color.Color8( 80,  80,  80)), // high-lands
+        (0.70f, 0.81f, Color.Color8( 80,  80,  80), Color.Color8(150, 150, 150)), // mountains
+        (0.81f, 1.01f, Color.Color8(180, 180, 180), Color.Color8(255, 255, 255)), // peaks
     };
 
-    private static Godot.Color HeightToColor(float v)
+    private static Color HeightToColor(float v)
     {
         foreach (var band in ColorBands)
         {
@@ -66,160 +66,10 @@ public partial class DiamondSquareGenerator : Sprite2D
         return ImageTexture.CreateFromImage(img);
     }
 
-    public void Standardize(float[,] arr, float multi = 1f)
-    {
-        float mean = arr.Mean(Width, Height);
-        float std = arr.Std(Width, Height);
-
-        arr.Subtract(mean, Width, Height);
-        arr.Multiply(multi/std, Width, Height);
-        arr.Add(0.5f, Width, Height);
-        arr.Clip(0f, 1f, Width, Height);
-
-        // for (int y = 0; y < Height; y++)
-        // {
-        //     for (int x = 0; x < Width; x++)
-        //     {
-        //         arr[x, y] -= mean;
-        //         arr[x, y] *= multi / std;
-        //     }
-        // }
-    }
-    
-    public void Standardize_Min_Max(float[,] arr)
-    {
-        float min = ArrayExtensions.Min(arr);
-        float max = ArrayExtensions.Max(arr);
-
-        arr.Subtract(min, Width, Height);
-        arr.Multiply(1f/(max-min), Width, Height);
-        // arr.Divide(max-min, Width, Height);
-        arr.Clip(0f, 1f, Width, Height);
-
-        // for (int y = 0; y < Height; y++)
-        // {
-        //     for (int x = 0; x < Width; x++)
-        //     {
-        //         arr[x, y] -= min;
-        //         arr[x, y] /= max - min;
-        //     }
-        // }
-    }
-
-    /*
-    Params:
-        startIter
-            has to be a positive integer
-            controls how zoomed out the terrain feels, higher value - bigger zoom
-        multi
-            scales the noise by a factor; basically useless since we standardize the values later
-
-    Returns:
-        array with size at least [Width, Height]
-    
-    Other Notes:
-        Generating noise map with shape far from a square, with `startIter` higher than 0 can be optimized
-    */
-    public float[,] Generate(int startIter = 0, float multi = 1f)
-    {
-        int iter = (int) Math.Ceiling(Math.Log2(Math.Max(Width, Height)-1d));
-        int size = (1 << iter) + 1;
-
-        var random = new RandomNumberGenerator();
-        // random.Seed = 0;
-
-        float[,] arr = new float[size, size];
-        
-        // Init Corners
-        int startIncrement = 1 << (iter - startIter);
-        // GD.PrintS(startIter, iter, startIncrement);
-        for (int y = 0; y < size; y += startIncrement)
-        {
-            for (int x = 0; x < size; x += startIncrement)
-            {
-                arr[x, y] = random.RandfRange(-multi, multi);
-            }
-        }
-
-        // Main Loop
-        for (int i = startIter; i < iter; i++)
-        {
-            int increment = 1 << (iter-i);
-            int increment2 = increment / 2;
-
-            // Stage 1
-            for (int l = 0; l < size-1; l += increment)
-            {
-                for (int t = 0; t < size-1; t += increment)
-                {
-                    int r = l + increment;
-                    int b = t + increment;
-
-                    int x = (l + r) / 2;
-                    int y = (t + b) / 2;
-
-                    float a = (arr[l, t] + arr[r, t] + arr[l, b] + arr[r, b]) / 4f;
-                    float m = random.RandfRange(-multi, multi);
-                    arr[x, y] = a + m;
-                }
-            }
-
-            // Stage 2
-            for (int x = 0; x < size; x += increment2)
-            {
-                for (int y = 0; y < size; y += increment2)
-                {
-                    if ((x / increment2 + y / increment2) % 2 == 0) continue;
-
-                    int count = 4;
-
-                    float lv, rv, tv, bv;
-                    lv = rv = tv = bv = 0f;
-
-                    if (x - increment2 >= 0)
-                    {
-                        lv = arr[x - increment2, y];
-                    } else {
-                        count -= 1;
-                    }
-
-                    if (x + increment2 < size)
-                    {
-                        rv = arr[x + increment2, y];
-                    } else {
-                        count -= 1;
-                    }
-
-                    if (y - increment2 >= 0)
-                    {
-                        tv = arr[x, y - increment2];
-                    } else {
-                        count -= 1;
-                    }
-
-                    if (y + increment2 < size)
-                    {
-                        bv = arr[x, y + increment2];
-                    } else {
-                        count -= 1;
-                    }
-
-                    float a = (lv + rv + tv + bv) / count;
-                    float m = random.RandfRange(-multi, multi);
-                    arr[x, y] = a + m;
-                }
-            }
-            multi /= 2;
-        }
-
-        return arr;
-    }
     public override void _Ready()
     {
-        float[,] arr = Generate(2, 1f);
-        Standardize(arr, .18f);
-        // arr.Add(0.5f);
-        // arr.Clip(0f, 1f, Width, Height);
+        float[,] arr = DiamondSquare.Generate(Width, Height, StartIter);
+        DiamondSquare.Standardize(arr, Width, Height, StandardizeMulti);
         Texture = CreateColorTexture(arr);
         // Texture = CreateTexture(arr);
         Centered = false;

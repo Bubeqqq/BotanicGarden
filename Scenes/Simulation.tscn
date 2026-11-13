@@ -3,11 +3,9 @@
 [ext_resource type="Script" uid="uid://cormhnbxqsamo" path="res://Scripts/Render/WorldRender.cs" id="1_nsnmm"]
 [ext_resource type="Script" uid="uid://cglb3aafrshxo" path="res://Scripts/Camera/CameraMovement.cs" id="2_qcdiq"]
 [ext_resource type="Script" uid="uid://clw20tbsvo5y1" path="res://Scripts/BlockSelection/BlockSelectorUI.cs" id="3_brcob"]
-[ext_resource type="Script" uid="uid://c044pskwwv3bj" path="res://Scripts/HeightMap/DiamondSquareGenerator.cs" id="3_qcdiq"]
 
-[node name="World" type="Node3D" unique_id=1069929063 node_paths=PackedStringArray("_diamondSquareGenerator")]
+[node name="World" type="Node3D" unique_id=1069929063]
 script = ExtResource("1_nsnmm")
-_diamondSquareGenerator = NodePath("HeightMapGenerator")
 
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1958936380 node_paths=PackedStringArray("SelectedBlockColor", "SelectedBlockLabel", "worldRender", "RadiusLabel", "DensityLabel")]
 script = ExtResource("2_qcdiq")
@@ -90,6 +88,3 @@ size_flags_horizontal = 3
 [node name="BlocksList" type="ItemList" parent="Player/CanvasLayer/BlockSelectorUI/HBoxContainer" unique_id=565190624]
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="HeightMapGenerator" type="Sprite2D" parent="." unique_id=827734822]
-script = ExtResource("3_qcdiq")

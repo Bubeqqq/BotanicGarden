@@ -21,8 +21,7 @@ public partial class WorldRender : Node3D
 	
 	//  -World size
 	private int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
-	[Export]
-	private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 64;
+	[Export] private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 64;
 	
 	//  -GPU
 	private Vector3 _workGroupSize = new Vector3(8, 4, 8);
@@ -73,8 +72,6 @@ public partial class WorldRender : Node3D
 	private Texture2Drd _displayHighlightTex;
 	private bool _highlightRequested = false;
 	private InteractionPushConstant _highlightData;
-	[Export]
-	private DiamondSquareGenerator _diamondSquareGenerator;
 	
 	public override void _Ready()
 	{
@@ -307,8 +304,9 @@ public partial class WorldRender : Node3D
 		};
 		var view = new RDTextureView();
 
-		var map = _diamondSquareGenerator.Generate();
-		_diamondSquareGenerator.Standardize_Min_Max(map);
+		var map = DiamondSquare.Generate(_gridWidth, _gridDepth);
+		// DiamondSquare.StandardizeMinMax(map, _gridWidth, _gridDepth);
+		DiamondSquare.Standardize(map, _gridWidth, _gridDepth, .18f);
 		
 		var whichFlower = false;
 		var initialData = new short[VoxelCount * 4];
