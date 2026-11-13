@@ -320,11 +320,11 @@ public partial class WorldRender : Node3D
 			
 			var idx = i * 4;
 
-			if ((int)(map[x, z] * _gridHeight) == y)
+			if (y <= (int)(map[x, z] * _gridHeight))
 			{
 				initialData[idx] = 6144;
 			}
-			else if ((int)(map[x, z] * _gridHeight) + 1 == y && GD.Randf() < 0.003f)
+			else if ( y == (int)(map[x, z] * _gridHeight) + 1 && GD.Randf() < 0.003f)
 			{
 				initialData[idx] = whichFlower ? (short)4096 : (short)4101;
 				whichFlower = !whichFlower;
