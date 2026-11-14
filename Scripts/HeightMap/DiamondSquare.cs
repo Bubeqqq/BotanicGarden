@@ -28,7 +28,7 @@ public static class DiamondSquare
     */
     public static float[,] Generate(int width, int height, int startIter = 0, float multi = 1f, ulong? seed = null)
     {
-        int iter = (int) Math.Ceiling(Math.Log2(Math.Max(Math.Max(width, height), 2) - 1d));
+        int iter = Iterations(width, height);
         int size = (1 << iter) + 1;
 
         if (startIter < 0 || startIter > iter)
@@ -122,6 +122,26 @@ public static class DiamondSquare
         }
 
         return arr;
+    }
+
+    // Number of subdivision steps for a map of this size (map side = 2^iter + 1).
+    private static int Iterations(int width, int height)
+    {
+        return (int) Math.Ceiling(Math.Log2(Math.Max(Math.Max(width, height), 2) - 1d));
+    }
+
+    /*
+    Returns the startIter for which the initial random corners are `regionSize` apart,
+    so every regionSize x regionSize block of the map behaves like a separate full map.
+    regionSize must be a power of two; maps smaller than one region get 0.
+    */
+    public static int StartIterForRegionSize(int width, int height, int regionSize = 256)
+    {
+        int regionIter = (int) Math.Round(Math.Log2(regionSize));
+        if (1 << regionIter != regionSize)
+            throw new ArgumentException($"regionSize musi być potęgą dwójki, podano {regionSize}", nameof(regionSize));
+
+        return Math.Max(0, Iterations(width, height) - regionIter);
     }
 
     // Standardizes the [width, height] region to mean 0.5, scaled by multi/std, clipped to [0, 1].

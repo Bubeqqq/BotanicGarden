@@ -20,8 +20,10 @@ public partial class WorldRender : Node3D
 	//Options
 	
 	//  -World size
-	private int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
-	[Export] private int _gridWidth = 256, _gridDepth = 256, _gridHeight = 64;
+	private const int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
+	private const int _gridWidth = 512, _gridDepth = 512, _gridHeight = 128;
+	private const int _minTerrainHeight = 16, _maxTerrainHeight = 80;
+	private const int _terrainHeight = _maxTerrainHeight - _minTerrainHeight;
 	
 	//  -GPU
 	private Vector3 _workGroupSize = new Vector3(8, 4, 8);
@@ -304,9 +306,9 @@ public partial class WorldRender : Node3D
 		};
 		var view = new RDTextureView();
 
-		var map = DiamondSquare.Generate(_gridWidth, _gridDepth);
+		var map = DiamondSquare.Generate(_gridWidth, _gridDepth, DiamondSquare.StartIterForRegionSize(_gridWidth, _gridDepth, 128));
 		// DiamondSquare.StandardizeMinMax(map, _gridWidth, _gridDepth);
-		DiamondSquare.Standardize(map, _gridWidth, _gridDepth, .18f);
+		DiamondSquare.Standardize(map, _gridWidth, _gridDepth, .16f);
 		
 		var whichFlower = false;
 		var initialData = new short[VoxelCount * 4];
@@ -320,11 +322,11 @@ public partial class WorldRender : Node3D
 			
 			var idx = i * 4;
 
-			if (y <= (int)(map[x, z] * _gridHeight))
+			if (y <= (int)(map[x, z] * _terrainHeight) + _minTerrainHeight)
 			{
 				initialData[idx] = 6144;
 			}
-			else if ( y == (int)(map[x, z] * _gridHeight) + 1 && GD.Randf() < 0.003f)
+			else if ( y == (int)(map[x, z] * _terrainHeight) + _minTerrainHeight + 1 && GD.Randf() < 0.003f)
 			{
 				initialData[idx] = whichFlower ? (short)4096 : (short)4101;
 				whichFlower = !whichFlower;
