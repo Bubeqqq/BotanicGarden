@@ -1,0 +1,88 @@
+[gd_scene format=3 uid="uid://bbyde5sksohkx"]
+
+[ext_resource type="Script" uid="uid://cormhnbxqsamo" path="res://simulation/WorldRender.cs" id="1_nsnmm"]
+[ext_resource type="Script" uid="uid://cglb3aafrshxo" path="res://player/CameraMovement.cs" id="2_qcdiq"]
+[ext_resource type="Script" uid="uid://clw20tbsvo5y1" path="res://ui/block_selector/BlockSelectorUI.cs" id="3_brcob"]
+
+[node name="World" type="Node3D" unique_id=1069929063]
+script = ExtResource("1_nsnmm")
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1958936380 node_paths=PackedStringArray("worldRender", "RadiusLabel", "DensityLabel")]
+script = ExtResource("2_qcdiq")
+worldRender = NodePath("..")
+RadiusLabel = NodePath("CanvasLayer/MarginContainer/VBoxContainer/RadiusLabel")
+DensityLabel = NodePath("CanvasLayer/MarginContainer/VBoxContainer/DensityLabel")
+
+[node name="Camera3D" type="Camera3D" parent="Player" unique_id=1806285765]
+
+[node name="CanvasLayer" type="CanvasLayer" parent="Player" unique_id=695673944]
+
+[node name="MarginContainer" type="MarginContainer" parent="Player/CanvasLayer" unique_id=910595608]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -68.0
+offset_top = -104.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_bottom = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Player/CanvasLayer/MarginContainer" unique_id=733998981]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Player/CanvasLayer/MarginContainer/VBoxContainer" unique_id=209743122]
+layout_mode = 2
+
+[node name="AspectRatioContainer" type="AspectRatioContainer" parent="Player/CanvasLayer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=2071249482]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+stretch_mode = 1
+
+[node name="SelectedBlockColor" type="ColorRect" parent="Player/CanvasLayer/MarginContainer/VBoxContainer/HBoxContainer/AspectRatioContainer" unique_id=1867775586]
+layout_mode = 2
+
+[node name="SelectedBlockLabel" type="Label" parent="Player/CanvasLayer/MarginContainer/VBoxContainer/HBoxContainer" unique_id=123907697]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="RadiusLabel" type="Label" parent="Player/CanvasLayer/MarginContainer/VBoxContainer" unique_id=1009781044]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 2
+
+[node name="DensityLabel" type="Label" parent="Player/CanvasLayer/MarginContainer/VBoxContainer" unique_id=680338947]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 2
+
+[node name="BlockSelectorUI" type="PanelContainer" parent="Player/CanvasLayer" unique_id=589345985 node_paths=PackedStringArray("CameraController", "TypesList", "GroupsList", "BlocksList")]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("3_brcob")
+CameraController = NodePath("../..")
+TypesList = NodePath("HBoxContainer/TypesList")
+GroupsList = NodePath("HBoxContainer/GroupsList")
+BlocksList = NodePath("HBoxContainer/BlocksList")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Player/CanvasLayer/BlockSelectorUI" unique_id=1366481485]
+layout_mode = 2
+
+[node name="TypesList" type="ItemList" parent="Player/CanvasLayer/BlockSelectorUI/HBoxContainer" unique_id=1402177995]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="GroupsList" type="ItemList" parent="Player/CanvasLayer/BlockSelectorUI/HBoxContainer" unique_id=1704499415]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BlocksList" type="ItemList" parent="Player/CanvasLayer/BlockSelectorUI/HBoxContainer" unique_id=565190624]
+layout_mode = 2
+size_flags_horizontal = 3

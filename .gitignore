@@ -4,3 +4,6 @@
 
 # Claude Code
 CLAUDE.md
+
+# Runtime user settings (written by SettingsManager)
+usersettings.json
