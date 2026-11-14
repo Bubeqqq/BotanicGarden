@@ -16,7 +16,7 @@ bool is_solid(int state) {
 //         return false;
 //     }
 
-    if (state <= 1) {
+    if (state < 1) {
         return false;
     }
     

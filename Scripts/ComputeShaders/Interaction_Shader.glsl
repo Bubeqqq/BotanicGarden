@@ -45,7 +45,7 @@ void main() {
         if (is_inside_grid) {
             uvec4 state = imageLoad(voxel_map, imap_pos);
             
-            if (state.r > 1u) { 
+            if (state.r > 0u) { 
 
                 imageStore(highlight_map, ivec2(0, 0), uvec4(imap_pos.x, imap_pos.y, imap_pos.z, uint(params.radius + 1)));
 
@@ -94,12 +94,12 @@ void main() {
                                     ivec3 check_pos = ivec3(place_x, y, place_z);
                                     uvec4 column_state = imageLoad(voxel_map, check_pos);
 
-                                    if (column_state.r > 1u) { 
+                                    if (column_state.r > 0u) { 
                                         ivec3 target_pos = ivec3(place_x, y + 1, place_z);
                                         
                                         if (target_pos.y < grid_size.y) {
                                             uvec4 upper_state = imageLoad(voxel_map, target_pos);
-                                            if (upper_state.r <= 1u) {
+                                            if (upper_state.r <= 0u) {
                                                 imageStore(voxel_map, target_pos, uvec4(uint(params.action_type), 1u, 1u, 1u));
                                             }
                                         }

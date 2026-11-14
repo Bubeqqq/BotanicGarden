@@ -1,18 +1,18 @@
 
-ivec4 check_flower_roots(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
-    ivec4 new_value = neighbors[1][1][1];
+uvec4 check_flower_roots(uvec4[3][3][3] neighbors, uvec3 pos, uint seed){
+    uvec4 new_value = neighbors[1][1][1];
     
-    if(search_for_flower_on_Y_axis(neighbors, 1, 5, 6).r == 0){
-        ivec4 upper = search_for_flower_on_Y_axis(neighbors, 2, 0); // check for seeds
+    if(search_for_flower_on_Y_axis(neighbors, 1, 5, 6).r == 0){ 
+        uvec4 upper = search_for_flower_on_Y_axis(neighbors, 2, 0); // check for seeds
         if(upper.r != 0){
-            ivec4 rawInput = dataArray[upper.r].packedData;
-            int s4 = bitfieldExtract(rawInput.z, 0, 16); // growable roots index
+            uvec4 rawInput = dataArray[upper.r].packedData;
+            uint s4 = bitfieldExtract(rawInput.z, 0, 16); // growable roots index
 
             new_value.r = s4;
             return new_value;
         }
 
-        ivec4 upper2 = search_for_flower_on_Y_axis(neighbors, 2, 5); // check for roots
+        uvec4 upper2 = search_for_flower_on_Y_axis(neighbors, 2, 5); // check for roots
         if(upper2.r != 0){
             float r = rand_fast(pos, seed);
 
@@ -26,7 +26,7 @@ ivec4 check_flower_roots(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
     return new_value;
 }
 
-ivec4 calculate_soil(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
+uvec4 calculate_soil(uvec4[3][3][3] neighbors, uvec3 pos, uint seed){
     //ivec4 new_value = neighbors[1][1][1];
     //new_value.r = 0;
     

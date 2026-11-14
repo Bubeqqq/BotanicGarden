@@ -1,5 +1,5 @@
-ivec4 check_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
-	ivec4 new_value = neighbors[1][1][1];
+uvec4 check_flower(uvec4[3][3][3] neighbors, uvec3 pos, uint seed){
+	uvec4 new_value = neighbors[1][1][1];
 
 	/*ivec4 rawInput = dataArray[current_index].packedData;
 	
@@ -15,7 +15,7 @@ ivec4 check_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
 	int s6 = bitfieldExtract(rawInput.w, 0, 16);
 	int s7 = bitfieldExtract(rawInput.w, 16, 16);*/
 
-	int index = search_for_flower_on_Y_axis(neighbors, 1, 3).r;
+	uint index = search_for_flower_on_Y_axis(neighbors, 1, 3).r;
 	if(index != 0) // check for center of flower, on the same level as the voxel
 	{
 		int s2 = bitfieldExtract(dataArray[index].packedData.y, 0, 16); // flower leaf
@@ -30,10 +30,10 @@ ivec4 check_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
 	}
 
 	if(search_for_flower_on_Y_axis(neighbors, 1, 1, 2).r == 0){ // check if the stalk have the space to grow
-		ivec4 bottom = search_for_flower_on_Y_axis(neighbors, 0, 1); // check for growable stalk under the voxel
+		uvec4 bottom = search_for_flower_on_Y_axis(neighbors, 0, 1); // check for growable stalk under the voxel
 		if(bottom.r != 0){
-			ivec4 rawInput = dataArray[bottom.r].packedData;
-			int s3 = bitfieldExtract(rawInput.y, 16, 16); // center
+			uvec4 rawInput = dataArray[bottom.r].packedData;
+			uint s3 = bitfieldExtract(rawInput.y, 16, 16); // center
 			
 			float r = rand_fast(pos, seed);
 
@@ -46,8 +46,8 @@ ivec4 check_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
 		}else{
 			bottom = search_for_flower_on_Y_axis(neighbors, 0, 0); // check for seed under 
 			if(bottom.r != 0){
-				ivec4 rawInput = dataArray[bottom.r].packedData;
-				int s2 = bitfieldExtract(rawInput.y, 0, 16); // center
+				uvec4 rawInput = dataArray[bottom.r].packedData;
+				uint s2 = bitfieldExtract(rawInput.y, 0, 16); // center
 
 				float r = rand_fast(pos, seed);
 
@@ -62,8 +62,8 @@ ivec4 check_flower(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
 	return new_value;
 }
 
-ivec4 check_falling_blocks(ivec4[3][3][3] neighbors, uint seed){
-	ivec4 new_value = neighbors[1][1][1];
+uvec4 check_falling_blocks(uvec4[3][3][3] neighbors, uint seed){
+	uvec4 new_value = neighbors[1][1][1];
 	
 	uint type_above = (neighbors[1][2][1].r >> 11u) & 0x1Fu;
 	if (type_above == 4u) {
@@ -74,12 +74,12 @@ ivec4 check_falling_blocks(ivec4[3][3][3] neighbors, uint seed){
 	int src_x = 1 - dir.x;
 	int src_z = 1 - dir.y;
 
-	ivec4 diag_block = neighbors[src_x][2][src_z];
+	uvec4 diag_block = neighbors[src_x][2][src_z];
 	uint type_diag = (diag_block.r >> 11u) & 0x1Fu;
 	
 	if (type_diag == 4u && neighbors[src_x][1][src_z].r != 0) {
-		ivec4 rawInput = dataArray[diag_block.r].packedData;
-		int s1 = bitfieldExtract(rawInput.x, 16, 16);
+		uvec4 rawInput = dataArray[diag_block.r].packedData;
+		uint s1 = bitfieldExtract(rawInput.x, 16, 16);
 
 		if (s1 != 0) {
 			new_value = diag_block;
@@ -89,15 +89,15 @@ ivec4 check_falling_blocks(ivec4[3][3][3] neighbors, uint seed){
 	return new_value;
 }
 
-ivec4 calculate_air(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
-	ivec4 new_value = neighbors[1][1][1];
+uvec4 calculate_air(uvec4[3][3][3] neighbors, uvec3 pos, uint seed){
+	uvec4 new_value = neighbors[1][1][1];
 
-	new_value = check_flower(neighbors, pos, seed);
-	
+	new_value = check_falling_blocks(neighbors, seed);
+
 	if(new_value.r != 0)
 		return new_value;
-	
-	new_value = check_falling_blocks(neighbors, seed);
+
+	new_value = check_flower(neighbors, pos, seed);
 	
 	return new_value;
 

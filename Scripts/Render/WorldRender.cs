@@ -21,7 +21,7 @@ public partial class WorldRender : Node3D
 	
 	//  -World size
 	private const int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
-	private const int _gridWidth = 512, _gridDepth = 512, _gridHeight = 128;
+	private const int _gridWidth = 256, _gridDepth = 256, _gridHeight = 64;
 	private const int _minTerrainHeight = 16, _maxTerrainHeight = 80;
 	private const int _terrainHeight = _maxTerrainHeight - _minTerrainHeight;
 	
@@ -222,7 +222,7 @@ public partial class WorldRender : Node3D
 		byte[] voxelByte = MemoryMarshal.AsBytes(voxelData.AsSpan()).ToArray();
 		_voxelData = _rd.StorageBufferCreate((uint)voxelByte.Length, voxelByte);
 		
-		byte[] plantIndexByte = BitConverter.GetBytes((ushort)0);
+		byte[] plantIndexByte = BitConverter.GetBytes((uint)0);
 		_plantIndex = _rd.StorageBufferCreate((uint) plantIndexByte.Length, plantIndexByte);
 	}
 	
@@ -311,7 +311,7 @@ public partial class WorldRender : Node3D
 		DiamondSquare.Standardize(map, _gridWidth, _gridDepth, .16f);
 		
 		var whichFlower = false;
-		var initialData = new short[VoxelCount * 4];
+		var initialData = new ushort[VoxelCount * 4];
 		for (var i = 0; i < VoxelCount; i++)
 		{
 			//rainbow
@@ -328,7 +328,7 @@ public partial class WorldRender : Node3D
 			}
 			else if ( y == (int)(map[x, z] * _terrainHeight) + _minTerrainHeight + 1 && GD.Randf() < 0.003f)
 			{
-				initialData[idx] = whichFlower ? (short)4096 : (short)4101;
+				initialData[idx] = whichFlower ? (ushort)4096 : (ushort)4101;
 				whichFlower = !whichFlower;
 			}
 			else

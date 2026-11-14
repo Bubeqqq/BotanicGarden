@@ -10,8 +10,8 @@ using System.Text.Json.Serialization;
     Type 0: 0-2047       - Special voxels (air, ...)
     Type 1: 2048-4095    - Static blocks
     Type 2: 4096-6143    - Flowers
-    Type 3: 6144-8191    - Falling blocks
-    Type 4: 8192-10239   -
+    Type 3: 6144-8191    - Soils
+    Type 4: 8192-10239   - Falling blocks
     Type 5: 10240-12287  -
     Type 6: 12288-14335  -
     Type 7: 14336-16383  -
@@ -122,15 +122,15 @@ namespace BotanicGarden.Scripts.Render
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct VoxelDataStruct
     {
-        public short s0, s1, s2, s3, s4, s5, s6, s7;
+        public ushort s0, s1, s2, s3, s4, s5, s6, s7;
     }
     
     
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
     public struct VoxelDataStructSave
     {
-        public short index;
-        public short s0, s1, s2, s3, s4, s5, s6, s7;
+        public ushort index;
+        public ushort s0, s1, s2, s3, s4, s5, s6, s7;
     }
 }
 

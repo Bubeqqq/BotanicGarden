@@ -4,21 +4,23 @@ s1 -> Can fall to sides (0 - only down, 1 - down and to the sides)
 
 */
 
-ivec4 calculate_falling_blocks(ivec4[3][3][3] neighbors, uvec3 pos, uint seed){
-    ivec4 new_value = neighbors[1][1][1];
-    
+uvec4 calculate_falling_blocks(uvec4[3][3][3] neighbors, uvec3 pos, uint seed){
+    uvec4 new_value = neighbors[1][1][1];
+
     if (neighbors[1][0][1].r == 0) {
         new_value.r = 0;
     } else {
-        ivec4 rawInput = dataArray[neighbors[1][1][1].r].packedData;
-        int s1 = bitfieldExtract(rawInput.x, 16, 16);
-        
+        uvec4 rawInput = dataArray[neighbors[1][1][1].r].packedData;
+        uint s1 = bitfieldExtract(rawInput.x, 16, 16);
+
         if (s1 != 0) {
             ivec2 dir = get_diagonal_dir(seed);
             int dx = 1 + dir.x;
             int dz = 1 + dir.y;
 
-            if (neighbors[dx][0][dz].r == 0) {
+            uint type_above_target = (neighbors[dx][1][dz].r >> 11u) & 0x1Fu;
+
+            if (neighbors[dx][0][dz].r == 0 && type_above_target != 4u) {
                 new_value.r = 0;
             }
         }

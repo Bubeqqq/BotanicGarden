@@ -1,6 +1,6 @@
 // GLOBAL
 
-ivec4 check_voxels_on_Y_axis(int y, int index, ivec4[3][3][3] neighbors){
+uvec4 check_voxels_on_Y_axis(int y, int index, uvec4[3][3][3] neighbors){
     for(int x = 0; x < 3; x++){
         for(int z = 0; z < 3; z++){
             if(neighbors[x][y][z].r == index){
@@ -8,7 +8,7 @@ ivec4 check_voxels_on_Y_axis(int y, int index, ivec4[3][3][3] neighbors){
             }
         }
     }
-    return ivec4(0, 0, 0, 0);
+    return uvec4(0, 0, 0, 0);
 }
 
 uint pcg_hash(uint seed) {
@@ -24,13 +24,12 @@ float rand_fast(uvec3 pos, uint frame_seed) {
 
 uint get_next_plant_index(){
     uint next = next_plant_id;
-    next_plant_id = next_plant_id + 1;
-    return next;
+    return atomicAdd(next_plant_id, 1u);
 }
 
 //FLOWERS
 
-ivec4 search_for_flower_on_Y_axis(ivec4[3][3][3] neighbors, int y, int s0){
+uvec4 search_for_flower_on_Y_axis(uvec4[3][3][3] neighbors, int y, int s0){
     for(int x = 0; x < 3; x++){
         for(int z = 0; z < 3; z++){
             uint type = (neighbors[x][y][z].r >> 11u) & 0x1Fu;
@@ -41,21 +40,21 @@ ivec4 search_for_flower_on_Y_axis(ivec4[3][3][3] neighbors, int y, int s0){
             }
         }
     }
-    return ivec4(0, 0, 0, 0);
+    return uvec4(0, 0, 0, 0);
 }
 
-ivec4 search_for_flower_on_Y_axis(ivec4[3][3][3] neighbors, int y, int s0, int s0_2){
+uvec4 search_for_flower_on_Y_axis(uvec4[3][3][3] neighbors, int y, int s0, int s0_2){
     for(int x = 0; x < 3; x++){
         for(int z = 0; z < 3; z++){
             uint type = (neighbors[x][y][z].r >> 11u) & 0x1Fu;
-            int s0_index = bitfieldExtract(dataArray[neighbors[x][y][z].r].packedData.x, 0, 16);
+            uint s0_index = bitfieldExtract(dataArray[neighbors[x][y][z].r].packedData.x, 0, 16);
 
             if(type == 2u && (s0_index == s0 || s0_index == s0_2)){
                 return neighbors[x][y][z];
             }
         }
     }
-    return ivec4(0, 0, 0, 0);
+    return uvec4(0, 0, 0, 0);
 }
 
 // Falling blocks

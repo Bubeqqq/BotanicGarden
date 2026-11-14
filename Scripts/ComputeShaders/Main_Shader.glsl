@@ -7,8 +7,8 @@ struct MyDataStruct {
 
 layout(local_size_x = 8, local_size_y = 4, local_size_z = 8) in;
 
-layout(set = 0, binding = 0, rgba16i) uniform restrict readonly iimage3D input_img;
-layout(set = 0, binding = 1, rgba16i) uniform restrict writeonly iimage3D output_img;
+layout(set = 0, binding = 0, rgba16ui) uniform restrict readonly uimage3D input_img;
+layout(set = 0, binding = 1, rgba16ui) uniform restrict writeonly uimage3D output_img;
 
 layout(set = 0, binding = 2, std430) restrict buffer DataBuffer {
     MyDataStruct dataArray[];
@@ -31,11 +31,11 @@ layout(push_constant, std430) uniform Params {
 #include "res://Scripts/ComputeShaders/Soil_Shader.glslinc"
 #include "res://Scripts/ComputeShaders/Falling_Blocks_Shader.glslinc"
 
-ivec4 get_voxel(ivec3 pos, ivec3 grid_size) {
+uvec4 get_voxel(ivec3 pos, ivec3 grid_size) {
 	if (pos.x < 0 || pos.x >= grid_size.x ||
 		pos.y < 0 || pos.y >= grid_size.y ||
 		pos.z < 0 || pos.z >= grid_size.z) {
-		return ivec4(0, 0, 0, 0);
+		return uvec4(0, 0, 0, 0);
 	}
 	return imageLoad(input_img, pos);
 }
@@ -48,11 +48,11 @@ void main() {
         return;
     }
   
-	ivec4 current_value = get_voxel(position, grid_size);
+	uvec4 current_value = get_voxel(position, grid_size);
     uint type = (current_value.r >> 11u) & 0x1Fu; //type of voxel
     uint index = current_value.r; //index in that type
     
-    ivec4 new_value = ivec4(current_value.r, current_value.g, current_value.b ,current_value.a);
+    uvec4 new_value = uvec4(current_value.r, current_value.g, current_value.b ,current_value.a);
     
     //Types that don't requeire scanning
     
@@ -62,20 +62,20 @@ void main() {
     }
     
     //types that requeire scanning 
-    ivec4 neighbors[3][3][3];
+    uvec4 neighbors[3][3][3];
 
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             for (int dz = -1; dz <= 1; dz++) {
                 ivec3 check_pos = position + ivec3(dx, dy, dz);
-                ivec4 val = get_voxel(check_pos, grid_size);
+                uvec4 val = get_voxel(check_pos, grid_size);
 
 
                 neighbors[dx + 1][dy + 1][dz + 1] = val;
             }
         }
     }
-    //11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+    //11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
     if(type == 0){ // Special voxels
         if(index == 0) // Air
             new_value = calculate_air(neighbors, gl_GlobalInvocationID.xyz, params.frame_seed);
