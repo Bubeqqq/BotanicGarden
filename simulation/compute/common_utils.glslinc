@@ -1,6 +1,6 @@
 // GLOBAL
 
-uvec4 check_voxels_on_Y_axis(int y, int index, uvec4[3][3][3] neighbors){
+uvec4 check_voxels_on_Y_axis(int y, uint index, uvec4[3][3][3] neighbors){
     for(int x = 0; x < 3; x++){
         for(int z = 0; z < 3; z++){
             if(neighbors[x][y][z].r == index){
@@ -8,7 +8,7 @@ uvec4 check_voxels_on_Y_axis(int y, int index, uvec4[3][3][3] neighbors){
             }
         }
     }
-    return uvec4(0, 0, 0, 0);
+    return uvec4(0u);
 }
 
 uint pcg_hash(uint seed) {
@@ -23,38 +23,132 @@ float rand_fast(uvec3 pos, uint frame_seed) {
 }
 
 uint get_next_plant_index(){
-    uint next = next_plant_id;
     return atomicAdd(next_plant_id, 1u);
 }
 
-//FLOWERS
+// FLOWERS
 
-uvec4 search_for_flower_on_Y_axis(uvec4[3][3][3] neighbors, int y, int s0){
-    for(int x = 0; x < 3; x++){
-        for(int z = 0; z < 3; z++){
-            uint type = (neighbors[x][y][z].r >> 11u) & 0x1Fu;
-            int s0_index = bitfieldExtract(dataArray[neighbors[x][y][z].r].packedData.x, 0, 16);
+struct FlowerData {
+    uint s0, s1, s2, s3, s4, s5, s6, s7;
+};
 
-            if(type == 2u && s0_index == s0){
-                return neighbors[x][y][z];
-            }
-        }
-    }
-    return uvec4(0, 0, 0, 0);
+FlowerData get_flower_data(uint index) {
+    uvec4 raw = dataArray[index].packedData;
+    FlowerData d;
+    d.s0 = bitfieldExtract(raw.x, 0, 16);
+    d.s1 = bitfieldExtract(raw.x, 16, 16);
+    d.s2 = bitfieldExtract(raw.y, 0, 16);
+    d.s3 = bitfieldExtract(raw.y, 16, 16);
+    d.s4 = bitfieldExtract(raw.z, 0, 16);
+    d.s5 = bitfieldExtract(raw.z, 16, 16);
+    d.s6 = bitfieldExtract(raw.w, 0, 16);
+    d.s7 = bitfieldExtract(raw.w, 16, 16);
+    return d;
 }
 
-uvec4 search_for_flower_on_Y_axis(uvec4[3][3][3] neighbors, int y, int s0, int s0_2){
+bool is_flower_sub(uvec4 voxel, uint target_s0) {
+    uint type = (voxel.r >> 11u) & 0x1Fu;
+    if (type != 2u) return false;
+    uint s0 = bitfieldExtract(dataArray[voxel.r].packedData.x, 0, 16);
+    return s0 == target_s0;
+}
+
+uvec4 search_for_flower_on_Y_axis(uvec4[3][3][3] neighbors, int y, uint s0){
     for(int x = 0; x < 3; x++){
         for(int z = 0; z < 3; z++){
-            uint type = (neighbors[x][y][z].r >> 11u) & 0x1Fu;
-            uint s0_index = bitfieldExtract(dataArray[neighbors[x][y][z].r].packedData.x, 0, 16);
-
-            if(type == 2u && (s0_index == s0 || s0_index == s0_2)){
+            if(is_flower_sub(neighbors[x][y][z], s0)){
                 return neighbors[x][y][z];
             }
         }
     }
-    return uvec4(0, 0, 0, 0);
+    return uvec4(0u);
+}
+
+uvec4 search_for_flower_on_Y_axis(uvec4[3][3][3] neighbors, int y, uint s0, uint s0_2){
+    for(int x = 0; x < 3; x++){
+        for(int z = 0; z < 3; z++){
+            if(is_flower_sub(neighbors[x][y][z], s0) || is_flower_sub(neighbors[x][y][z], s0_2)){
+                return neighbors[x][y][z];
+            }
+        }
+    }
+    return uvec4(0u);
+}
+
+uint count_flower_in_box(uvec4[3][3][3] neighbors, uint s0) {
+    uint count = 0u;
+    for (int x = 0; x < 3; x++) {
+        for (int y = 0; y < 3; y++) {
+            for (int z = 0; z < 3; z++) {
+                if (is_flower_sub(neighbors[x][y][z], s0)) {
+                    count++;
+                }
+            }
+        }
+    }
+    return count;
+}
+
+uint count_flower_on_Y_axis(uvec4[3][3][3] neighbors, int y, uint s0, uint s0_2) {
+    uint count = 0u;
+    for (int x = 0; x < 3; x++) {
+        for (int z = 0; z < 3; z++) {
+            if (is_flower_sub(neighbors[x][y][z], s0) || is_flower_sub(neighbors[x][y][z], s0_2)) {
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+uvec4 search_flower_sideways(uvec4[3][3][3] neighbors, int y, uint s0) {
+    const ivec2 dirs[4] = ivec2[4](ivec2(0, 1), ivec2(2, 1), ivec2(1, 0), ivec2(1, 2));
+    for (int i = 0; i < 4; i++) {
+        uvec4 cand = neighbors[dirs[i].x][y][dirs[i].y];
+        if (is_flower_sub(cand, s0)) {
+            return cand;
+        }
+    }
+    return uvec4(0u);
+}
+
+uvec4 search_stalk_sideways(uvec4[3][3][3] neighbors, int y, out bool along_x, out ivec2 dir_to_stalk) {
+    const ivec2 dirs[4] = ivec2[4](ivec2(0, 1), ivec2(2, 1), ivec2(1, 0), ivec2(1, 2));
+    for (int i = 0; i < 4; i++) {
+        uvec4 cand = neighbors[dirs[i].x][y][dirs[i].y];
+        if (is_flower_sub(cand, 1u) || is_flower_sub(cand, 2u)) {
+            along_x = (i < 2);
+            dir_to_stalk = ivec2(dirs[i].x - 1, dirs[i].y - 1);
+            return cand;
+        }
+    }
+    along_x = false;
+    dir_to_stalk = ivec2(0, 0);
+    return uvec4(0u);
+}
+
+uint get_plant_height(uint b_channel) {
+    return bitfieldExtract(b_channel, 0, 8);
+}
+
+uint get_plant_spread(uint b_channel) {
+    return bitfieldExtract(b_channel, 8, 8);
+}
+
+uint pack_plant_size(uint height, uint spread) {
+    return (min(height, 255u) & 0xFFu) | ((min(spread, 255u) & 0xFFu) << 8u);
+}
+
+bool has_extended_sideways(uvec4[3][3][3] neighbors, uint current_spread) {
+    const ivec2 dirs[4] = ivec2[4](ivec2(0, 1), ivec2(2, 1), ivec2(1, 0), ivec2(1, 2));
+    for (int i = 0; i < 4; i++) {
+        uvec4 cand = neighbors[dirs[i].x][1][dirs[i].y];
+        if ((is_flower_sub(cand, 1u) || is_flower_sub(cand, 2u)) &&
+            get_plant_spread(cand.b) == current_spread + 1u) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // Falling blocks
