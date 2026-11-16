@@ -74,6 +74,10 @@ public partial class WorldRender : Node3D
 	private Texture2Drd _displayHighlightTex;
 	private bool _highlightRequested = false;
 	private InteractionPushConstant _highlightData;
+    
+    //Analysis Shader
+    private Rid _analysisShader, _analysisPipeline;
+    private Rid _analysisUniformSetA;
 	
 	public override void _Ready()
 	{
@@ -125,6 +129,26 @@ public partial class WorldRender : Node3D
 		uniformB_HL.AddId(_highlightTex);
 		_interactUniformSetB = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformB, uniformB_HL }, _interactionShader, 0);
 	}
+
+    public void SetupAnalysisShader(string path)
+    {
+        var shaderFile = GD.Load<RDShaderFile>(path);
+        _analysisShader = _rd.ShaderCreateFromSpirV(shaderFile.GetSpirV());
+        _analysisPipeline = _rd.ComputePipelineCreate(_analysisShader);
+
+        var fmt = new RDTextureFormat {
+            Width = 1, Height = 1, Depth = 1,
+            Format = RenderingDevice.DataFormat.R16G16B16A16Uint,
+            UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit,
+            TextureType = RenderingDevice.TextureType.Type2D
+        };
+
+        var uniformA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
+        uniformA.AddId(_texA);
+        _analysisUniformSetA = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformA}, _analysisShader, 0);
+    }
+    
+    
 	public void RequestGpuRaycast(Vector3 start, Vector3 dir, float maxDist, int actionType, int radius = 0, float density = 1.0f)
 	{
 		start /= _voxelSize;
@@ -379,29 +403,29 @@ public partial class WorldRender : Node3D
 		var computeList = _rd.ComputeListBegin();
 
 
-	bool runInteract = _interactionRequested || _highlightRequested;
-	if (runInteract)
-	{
-		_rd.ComputeListBindComputePipeline(computeList, _interactionPipeline);
-		
-		var interactSet = _useAtoB ? _interactUniformSetA : _interactUniformSetB;
-		_rd.ComputeListBindUniformSet(computeList, interactSet, 0);
+	    bool runInteract = _interactionRequested || _highlightRequested;
+	    if (runInteract)
+	    {
+		    _rd.ComputeListBindComputePipeline(computeList, _interactionPipeline);
+		    
+		    var interactSet = _useAtoB ? _interactUniformSetA : _interactUniformSetB;
+		    _rd.ComputeListBindUniformSet(computeList, interactSet, 0);
 
-		var currentData = _interactionRequested ? _interactionData : _highlightData;
+		    var currentData = _interactionRequested ? _interactionData : _highlightData;
 
-		byte[] pushData = new byte[Marshal.SizeOf(currentData)];
-		IntPtr ptr = Marshal.AllocHGlobal(pushData.Length);
-		Marshal.StructureToPtr(currentData, ptr, true);
-		Marshal.Copy(ptr, pushData, 0, pushData.Length);
-		Marshal.FreeHGlobal(ptr);
+		    byte[] pushData = new byte[Marshal.SizeOf(currentData)];
+		    IntPtr ptr = Marshal.AllocHGlobal(pushData.Length);
+		    Marshal.StructureToPtr(currentData, ptr, true);
+		    Marshal.Copy(ptr, pushData, 0, pushData.Length);
+		    Marshal.FreeHGlobal(ptr);
 
-		_rd.ComputeListSetPushConstant(computeList, pushData, (uint)pushData.Length);
-		_rd.ComputeListDispatch(computeList, 1, 1, 1);
-		_rd.ComputeListAddBarrier(computeList); 
+		    _rd.ComputeListSetPushConstant(computeList, pushData, (uint)pushData.Length);
+		    _rd.ComputeListDispatch(computeList, 1, 1, 1);
+		    _rd.ComputeListAddBarrier(computeList); 
 
-		_interactionRequested = false;
-		_highlightRequested = false;
-	}
+		    _interactionRequested = false;
+		    _highlightRequested = false;
+	    }
 		_rd.ComputeListBindComputePipeline(computeList, _pipeline);
 		
 		var currentUniformSet = _useAtoB ? _uniformSetAtoB : _uniformSetBtoA;
