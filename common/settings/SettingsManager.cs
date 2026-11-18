@@ -3,7 +3,7 @@ using Godot;
 
 namespace BotanicGarden.Common.Settings;
 
-public static class Settings
+public static class SettingsManager
 {
     private const string _configPath = "user://settings.cfg";
     static readonly ConfigFile _cfg = new();
@@ -26,14 +26,17 @@ public static class Settings
     // Audio
     static readonly string AudioSection = "audio";
     public static double Volume {
-        get => (double)_cfg.GetValue(AudioSection, "volume", 0.5);
-        set => _cfg.SetValue(AudioSection, "volume", value);
+        get => Mathf.Clamp((float)_cfg.GetValue(AudioSection, "volume", 0.5f), 0f, 1f);
+        set {
+            _cfg.SetValue(AudioSection, "volume", Mathf.Clamp(value, 0f, 1f));
+            SettingsManager.ApplyAudio();
+        }
     }
 
     public static void ApplyAudio()
     {
-        // idk how audio works
-        // here's a place for it though
+        int master = AudioServer.GetBusIndex("Master");
+        AudioServer.SetBusVolumeDb(master, Mathf.LinearToDb((float)Volume));
     }
 
 
@@ -50,7 +53,7 @@ public static class Settings
     public static void RemoveBinding(StringName action)
     {
         InputMap.ActionEraseEvents(action);
-        _cfg.EraseSectionKey(InputSection, action);
+        _cfg.SetValue(InputSection, action, new Godot.Collections.Array<InputEvent>());
         Save();
     }
 

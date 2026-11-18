@@ -6,6 +6,8 @@ public partial class SettingsBoot : Node
 {
     public override void _EnterTree()
     {
-        Settings.Startup();
+        SettingsManager.Startup();
+        // SettingsManager.SetBinding("move_down", new InputEventKey { Keycode = Key.Ctrl });
+        // SettingsManager.SetBinding("sprint", new InputEventKey { Keycode = Key.Shift });
     }
 }
