@@ -304,7 +304,7 @@ public partial class WorldRender : Node3D
 		var image = Image.CreateEmpty(textureSize, textureSize, false, Image.Format.Rgb8);
 		var colors = VoxelData.LoadColors();
 		
-		for (var i = 0; i < ushort.MaxValue; i++)
+		for (var i = 0; i < colors.Length; i++)
 		{
 			var x = i % textureSize;
 			var y = i / textureSize;

@@ -44,6 +44,9 @@ namespace BotanicGarden.Simulation;
  */
 public class VoxelData
 {
+    // Liczba możliwych indeksów voxeli (0-65535), czyli o jeden więcej niż ushort.MaxValue
+    public const int IndexCount = ushort.MaxValue + 1;
+
     public static VoxelColor[] LoadColors()
     {
         using var file = FileAccess.Open("voxel_data/voxel_colors.json", FileAccess.ModeFlags.Read);
@@ -57,7 +60,7 @@ public class VoxelData
     
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
         var colors = JsonSerializer.Deserialize<VoxelColor[]>(jsonText, options);
-        var result = new VoxelColor[ushort.MaxValue];
+        var result = new VoxelColor[IndexCount];
 
         foreach (var color in colors)
         {
@@ -82,7 +85,7 @@ public class VoxelData
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
         var array = JsonSerializer.Deserialize<VoxelDataStructSave[]>(jsonText, options);
 
-        var result = new VoxelDataStruct[ushort.MaxValue];
+        var result = new VoxelDataStruct[IndexCount];
 
         foreach (var data in array)
         {

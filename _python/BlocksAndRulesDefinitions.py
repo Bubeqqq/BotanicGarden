@@ -482,7 +482,7 @@ class VoxelEditorApp:
             entry.bind("<FocusOut>", lambda e: self.update_color_preview_from_vars())
 
         # Sekcja 3: 8 wartości specjalnych (s0 - s7)
-        struct_box = ttk.LabelFrame(parent, text="3. Wartości specjalne (s0 - s7, typ short: -32768 do 32767)", padding=8)
+        struct_box = ttk.LabelFrame(parent, text="3. Wartości specjalne (s0 - s7, typ ushort: 0 do 65535)", padding=8)
         struct_box.pack(fill=tk.X, pady=(0, 8))
 
         grid_f = ttk.Frame(struct_box)
@@ -493,7 +493,7 @@ class VoxelEditorApp:
             r_idx = i // 2
             c_idx = (i % 2) * 2
             ttk.Label(grid_f, text=f"s{i}:", width=4, anchor=tk.E).grid(row=r_idx, column=c_idx, padx=(4, 2), pady=3, sticky="e")
-            sp = ttk.Spinbox(grid_f, from_=-32768, to=32767, textvariable=self.s_vars[i], width=10)
+            sp = ttk.Spinbox(grid_f, from_=0, to=65535, textvariable=self.s_vars[i], width=10)
             sp.grid(row=r_idx, column=c_idx + 1, padx=(0, 12), pady=3, sticky="we")
             grid_f.columnconfigure(c_idx + 1, weight=1)
 
@@ -759,8 +759,8 @@ class VoxelEditorApp:
         try:
             for i in range(8):
                 val = int(self.s_vars[i].get())
-                if not (-32768 <= val <= 32767):
-                    raise ValueError(f"Wartość s{i} ({val}) przekracza zakres short (-32768 do 32767).")
+                if not (0 <= val <= 65535):
+                    raise ValueError(f"Wartość s{i} ({val}) przekracza zakres ushort (0 do 65535).")
                 s_vals.append(val)
         except ValueError as e:
             messagebox.showerror("Błąd walidacji s0-s7", str(e))
