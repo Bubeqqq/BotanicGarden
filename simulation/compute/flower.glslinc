@@ -9,52 +9,83 @@ s0 = 0 -> seed
     s2 -> growable stalk index
     s3 -> stalk index
     s4 -> growable roots
+    s5 -> germination speed
 
 s0 = 1 -> growable stalk
     s2 -> stalk index
     s3 -> flower center
+    s4 -> growth speed
+    s5 -> max height above ground
+    s6 -> max sideways spread
+    s7 -> max buds / branches
     
 s0 = 2 -> stalk
+    s2 -> side stalk index
+    s3 -> flower center
+    s4 -> side growth speed
+    s5 -> max height above ground
+    s6 -> max sideways spread
+    s7 -> max buds / branches
 
 s0 = 3 -> flower center
     s2 -> flower leaf
+    s4 -> bloom speed
+    s5 -> max crown height
+    s6 -> max leaf radius
 
 s0 = 4 -> flower leaf
+    s2 -> next flower leaf
+    s4 -> leaf spread speed
+    s6 -> max leaf radius
 
 s0 = 5 -> growable roots
     s2 -> roots
+    s4 -> root growth speed
+    s5 -> max depth underground
+    s6 -> max sideways spread underground
+    s7 -> max root branches
 
 s0 = 6 -> roots
 
 */
-uvec4 calculate_flower(uvec4[3][3][3] neighbors, uvec3 pos, uint seed){
+uvec4 calculate_flower(uvec4[3][3][3] neighbors, uvec3 pos, uint seed) {
     uvec4 new_value = neighbors[1][1][1];
-    uvec4 rawInput = dataArray[new_value.r].packedData;
-    uint s0 = bitfieldExtract(rawInput.x, 0, 16);
-    uint s2 = bitfieldExtract(rawInput.y, 0, 16);
-    uint s3 = bitfieldExtract(rawInput.y, 16, 16);
-    
-    if(s0 == 1){ // growable stalk
-        if(search_for_flower_on_Y_axis(neighbors, 2, 1).r != 0){
-            float r = rand_fast(pos, seed);
+    FlowerData d = get_flower_data(new_value.r);
+    float r = rand_fast(pos, seed);
 
-            if(r < 0.003f * float(neighbors[1][1][1].b)){ // check for stop growing if there is stalk next to
-                new_value.r = s2;
+    if (d.s0 == 1u) { // growable stalk
+        bool has_grown_above = is_flower_sub(neighbors[1][2][1], 1u) ||
+        is_flower_sub(neighbors[1][2][1], 2u) ||
+        is_flower_sub(neighbors[1][2][1], 3u);
+
+        uint current_spread = get_plant_spread(new_value.b);
+        bool branch_continued = (current_spread > 0u) && has_extended_sideways(neighbors, current_spread);
+
+        if (has_grown_above || branch_continued) {
+            if (d.s2 != 0u) {
+                new_value.r = d.s2;
             }
         }
-    }else if(s0 == 5){ //growable roots
-        if(search_for_flower_on_Y_axis(neighbors, 0, 5, 6).r != 0){
-            float r = rand_fast(pos, seed);
+    } else if (d.s0 == 5u) { // growable roots
+        float stop_speed = float(d.s4 > 0u ? d.s4 : 60u) * 0.0001;
+        uint max_depth = d.s5 > 0u ? d.s5 : 8u;
+        uint current_depth = get_plant_height(new_value.b);
 
-            if(r < 0.006f){ // check for stop growing if there is stalk next to
-                new_value.r = s2;
+        bool has_root_below = is_flower_sub(neighbors[1][0][1], 5u) ||
+        is_flower_sub(neighbors[1][0][1], 6u);
+
+        if (has_root_below || current_depth >= max_depth) {
+            if (r < stop_speed && d.s2 != 0u) {
+                new_value.r = d.s2;
             }
         }
-    }else if(s0 == 0){ //seed
-        if(search_for_flower_on_Y_axis(neighbors, 2, 1, 2).r != 0){ // already grown
-            new_value.r = s3; //change to stalk
+    } else if (d.s0 == 0u) { // seed
+        if (is_flower_sub(neighbors[1][2][1], 1u) || is_flower_sub(neighbors[1][2][1], 2u)) {
+            if (d.s3 != 0u) {
+                new_value.r = d.s3;
+            }
         }
     }
-    
+
     return new_value;
 }

@@ -2,7 +2,7 @@
 #version 450
 
 struct MyDataStruct {
-    ivec4 packedData;
+    uvec4 packedData;
 };
 
 layout(local_size_x = 8, local_size_y = 4, local_size_z = 8) in;
@@ -75,7 +75,7 @@ void main() {
             }
         }
     }
-    //11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+    //111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
     if(type == 0){ // Special voxels
         if(index == 0) // Air
             new_value = calculate_air(neighbors, gl_GlobalInvocationID.xyz, params.frame_seed);
