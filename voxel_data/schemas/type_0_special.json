@@ -1,0 +1,7 @@
+{
+  "type": 0,
+  "name": "Special voxels",
+  "shader": "simulation/compute/air.glslinc",
+  "description": "Index 0 is air: falling blocks fall into it and stalks, flower centres and leaves grow into it. Other indices of this type have no rules. The renderer and the interaction shader treat indices 0 and 1 as empty. Has no parameters.",
+  "fields": {}
+}

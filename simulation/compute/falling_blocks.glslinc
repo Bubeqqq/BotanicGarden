@@ -1,5 +1,8 @@
 /*
 
+Falling blocks (type 4). Field meanings: res://voxel_data/schemas/type_4_falling_blocks.json
+(read by the block editor; update it when changing the rules here or in air.glslinc).
+
 s1 -> Can fall to sides (0 - only down, 1 - down and to the sides)
 
 */

@@ -1,3 +1,5 @@
+// Soil (type 3): roots grow into soil cells. Root fields (s0 = 5 growable roots) are defined in
+// res://voxel_data/schemas/type_2_plants.json; soil itself: res://voxel_data/schemas/type_3_soil.json
 uvec4 check_flower_roots(uvec4[3][3][3] neighbors, uvec3 pos, uint seed) {
     uvec4 new_value = neighbors[1][1][1];
     float r = rand_fast(pos, seed);

@@ -360,8 +360,9 @@ public partial class WorldRender : Node3D
 			}
 			else if ( y == (int)(map[x, z] * _terrainHeight) + _minTerrainHeight + 1 && GD.Randf() < 0.003f)
 			{
-				initialData[idx] = whichFlower ? (ushort)4096 : (ushort)4101;
-				whichFlower = !whichFlower;
+				// initialData[idx] = whichFlower ? (ushort)4096 : (ushort)4101;
+				// whichFlower = !whichFlower;
+				initialData[idx] = (ushort)4110;
 			}
 			else
 			{

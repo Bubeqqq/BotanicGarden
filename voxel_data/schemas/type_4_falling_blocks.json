@@ -1,0 +1,14 @@
+{
+  "type": 4,
+  "name": "Falling blocks",
+  "shader": "simulation/compute/falling_blocks.glslinc",
+  "description": "Sand-like blocks. They fall into air below them; the air cell pulls the block from above (check_falling_blocks in air.glslinc) and the block's own cell clears itself.",
+  "fields": {
+    "s1": {
+      "label": "Slides diagonally",
+      "short": "slides",
+      "kind": "flag",
+      "description": "On = when blocked below, can also slide down diagonally (one random cardinal direction per step). Off = falls straight down only."
+    }
+  }
+}

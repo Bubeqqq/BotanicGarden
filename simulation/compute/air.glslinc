@@ -1,3 +1,5 @@
+// Air (index 0): plants and falling blocks move into air cells. The fields read here are defined in
+// res://voxel_data/schemas/type_2_plants.json and type_4_falling_blocks.json.
 uvec4 check_flower(uvec4[3][3][3] neighbors, uvec3 pos, uint seed) {
     uvec4 new_value = neighbors[1][1][1];
     float r = rand_fast(pos, seed);

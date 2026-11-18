@@ -15,8 +15,15 @@
     "4106": "growable_roots_1",
     "4107": "roots_1",
     "4108": "growable_roots_2",
-    "4109": "roots",
-    "8192": "Falling_voxel"
+    "8192": "Falling_voxel",
+    "4110": "seed_3",
+    "4111": "growable_stalk_3",
+    "4112": "stalk_3",
+    "4113": "flower_center_3",
+    "4114": "flower_leaf_3_1",
+    "4115": "growable_roots_3",
+    "4116": "roots_3",
+    "4117": "flower_leaf_3_2"
   },
   "groups": {
     "Kwiat1": [
@@ -34,8 +41,17 @@
       4103,
       4104,
       4105,
-      4108,
-      4109
+      4108
+    ],
+    "Kwiat3": [
+      4110,
+      4111,
+      4112,
+      4113,
+      4114,
+      4115,
+      4116,
+      4117
     ]
   },
   "type_names": {

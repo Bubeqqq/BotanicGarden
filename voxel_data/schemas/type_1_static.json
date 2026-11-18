@@ -1,0 +1,7 @@
+{
+  "type": 1,
+  "name": "Static blocks",
+  "shader": "simulation/compute/main.glsl",
+  "description": "Copied through unchanged every step, without scanning neighbours (cheapest type). Has no parameters.",
+  "fields": {}
+}

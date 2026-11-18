@@ -1,0 +1,7 @@
+{
+  "type": 3,
+  "name": "Soil",
+  "shader": "simulation/compute/soil.glslinc",
+  "description": "Ground that roots grow into. A seed spawns its growable roots in the soil cell below it. Has no parameters. The renderer can draw soil almost invisible (transparent_soils).",
+  "fields": {}
+}

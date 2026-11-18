@@ -1,0 +1,268 @@
+{
+  "type": 2,
+  "name": "Plants",
+  "shader": "simulation/compute/flower.glslinc",
+  "description": "Plant parts. Stalks, flower centres and leaves grow into air (air.glslinc), roots grow into soil (soil.glslinc). One species is a set of plant voxels that point at each other through their index fields. The .b channel holds height (low byte) and spread (high byte).",
+  "variant_field": "s0",
+  "fields": {
+    "s0": {
+      "label": "Plant part",
+      "short": "part",
+      "kind": "variant",
+      "description": "Which part of a plant this voxel is. Decides what s2..s7 mean."
+    },
+    "s1": {
+      "label": "Species id",
+      "short": "species",
+      "kind": "species",
+      "read": false,
+      "description": "Informational, not read by the shader. By convention the same for all parts of one species."
+    }
+  },
+  "variants": {
+    "0": {
+      "name": "Seed",
+      "description": "Placed on soil. Spawns growable roots below and, with the germination chance, a growable stalk above. Turns into a stalk once a stalk is above it.",
+      "fields": {
+        "s2": {
+          "label": "Growable stalk",
+          "short": "stalk tip",
+          "kind": "index",
+          "target": { "type": 2, "variant": 1 },
+          "description": "Spawned in the air cell directly above the seed when it germinates (height 2)."
+        },
+        "s3": {
+          "label": "Stalk",
+          "short": "becomes",
+          "kind": "index",
+          "target": { "type": 2, "variant": 2 },
+          "description": "The seed turns into this once a growable stalk or stalk is directly above it."
+        },
+        "s4": {
+          "label": "Growable roots",
+          "short": "roots tip",
+          "kind": "index",
+          "target": { "type": 2, "variant": 5 },
+          "description": "Spawned straight away (no chance roll) in the soil cell directly below the seed, at depth 1."
+        },
+        "s5": {
+          "label": "Germination speed",
+          "short": "germ.",
+          "kind": "speed",
+          "scale": 0.0001,
+          "default": 1,
+          "description": "Chance per step that the air above the seed becomes the growable stalk (s2)."
+        }
+      }
+    },
+    "1": {
+      "name": "Growable stalk",
+      "description": "The growing tip of a stalk or of a side branch. The air above it copies it with height+1 until max height, then gets a flower centre. Branch tips (spread > 0) extend sideways instead.",
+      "fields": {
+        "s2": {
+          "label": "Stalk",
+          "short": "becomes",
+          "kind": "index",
+          "target": { "type": 2, "variant": 2 },
+          "description": "Turns into this once a growable stalk, stalk or flower centre is directly above it, or once its side branch has grown one cell further."
+        },
+        "s3": {
+          "label": "Flower centre",
+          "short": "centre",
+          "kind": "index",
+          "target": { "type": 2, "variant": 3 },
+          "description": "Placed on top when the main stalk reaches max height (only if no other centre is in the 3x3x3 box), or at the end of a side branch."
+        },
+        "s4": {
+          "label": "Growth speed",
+          "short": "speed",
+          "kind": "speed",
+          "scale": 0.0001,
+          "default": 10,
+          "description": "Chance per step to grow up one cell or to place the flower centre. When this cell is the trunk next to empty air, also the side-branch chance (scaled by 0.00008 instead)."
+        },
+        "s5": {
+          "label": "Max height",
+          "short": "height",
+          "kind": "limit",
+          "default": 12,
+          "description": "Height (counted from the seed, the first stalk cell is 2) at which the main stalk stops and places its flower centre. Side branches only start below it."
+        },
+        "s6": {
+          "label": "Max side spread",
+          "short": "spread",
+          "kind": "limit",
+          "zero": "no side branches",
+          "description": "Length of the lowest side branches in cells. Higher branches get shorter: s6 - (height - 2) / 2, at least 1."
+        },
+        "s7": {
+          "label": "Max buds",
+          "short": "buds",
+          "kind": "limit",
+          "default": 1,
+          "description": "Number of branch tiers is s7 / 2 (so 1 means no branches). Tiers start at heights 2, 4, 6... and alternate between the X and Z axis."
+        }
+      }
+    },
+    "2": {
+      "name": "Stalk",
+      "description": "A finished piece of stalk. Air cells beside it can start a side branch using its s2.",
+      "fields": {
+        "s2": {
+          "label": "Side stalk",
+          "short": "branch",
+          "kind": "index",
+          "target": { "type": 2, "variant": 1 },
+          "description": "Growable stalk spawned beside this stalk to start a side branch (spread 1)."
+        },
+        "s3": {
+          "label": "Flower centre",
+          "short": "centre",
+          "kind": "index",
+          "target": { "type": 2, "variant": 3 },
+          "read": false,
+          "description": "Not read by the shader at the moment (only the growable stalk's s3 is). Keep it equal to the growable stalk's s3."
+        },
+        "s4": {
+          "label": "Side growth speed",
+          "short": "speed",
+          "kind": "speed",
+          "scale": 0.00008,
+          "default": 10,
+          "description": "Chance per step that an empty cell beside this stalk starts a side branch."
+        },
+        "s5": {
+          "label": "Max height",
+          "short": "height",
+          "kind": "limit",
+          "default": 12,
+          "description": "Side branches only start below this height."
+        },
+        "s6": {
+          "label": "Max side spread",
+          "short": "spread",
+          "kind": "limit",
+          "zero": "no side branches",
+          "description": "Length of the lowest side branches in cells. Higher branches get shorter: s6 - (height - 2) / 2, at least 1."
+        },
+        "s7": {
+          "label": "Max buds",
+          "short": "buds",
+          "kind": "limit",
+          "default": 1,
+          "description": "Number of branch tiers is s7 / 2 (so 1 means no branches). Tiers start at heights 2, 4, 6... and alternate between the X and Z axis."
+        }
+      }
+    },
+    "3": {
+      "name": "Flower centre",
+      "description": "Top of a stalk or branch. Air around it becomes leaves/petals (s2).",
+      "fields": {
+        "s2": {
+          "label": "Leaf",
+          "short": "leaf",
+          "kind": "index",
+          "target": { "type": 2, "variant": 4 },
+          "description": "Spawned in air cells next to the centre, at distance 1 from it."
+        },
+        "s4": {
+          "label": "Bloom speed",
+          "short": "speed",
+          "kind": "speed",
+          "scale": 0.0001,
+          "default": 10000,
+          "description": "Chance per step that an air cell next to the centre becomes a leaf. The default 10000 means every step."
+        },
+        "s5": {
+          "label": "Crown height",
+          "short": "crown",
+          "kind": "limit",
+          "default": 1,
+          "description": "2 or more also places leaves in the cells diagonally below the centre (one level down, cardinal directions)."
+        },
+        "s6": {
+          "label": "Max petal radius",
+          "short": "radius",
+          "kind": "limit",
+          "default": 1,
+          "description": "1 = leaves only in the 4 cardinal neighbours of the centre. More than 1 = in any of the 8 neighbours on the centre's level. Further spread is controlled by the leaf's own s6."
+        }
+      }
+    },
+    "4": {
+      "name": "Leaf",
+      "description": "Leaf or petal around a flower centre. Spreads to neighbours until its max radius.",
+      "fields": {
+        "s2": {
+          "label": "Next leaf",
+          "short": "next",
+          "kind": "index",
+          "target": { "type": 2, "variant": 4 },
+          "description": "Spawned beside this leaf (same level) with distance + 1. Usually the leaf itself; point it at another leaf to get colour rings."
+        },
+        "s4": {
+          "label": "Spread speed",
+          "short": "speed",
+          "kind": "speed",
+          "scale": 0.0001,
+          "default": 20,
+          "description": "Chance per step that an air cell beside this leaf becomes the next leaf. Only happens while at most 2 leaves are around that cell."
+        },
+        "s6": {
+          "label": "Max radius",
+          "short": "radius",
+          "kind": "limit",
+          "default": 1,
+          "description": "Maximum distance from the flower centre."
+        }
+      }
+    },
+    "5": {
+      "name": "Growable roots",
+      "description": "Growing tip of the roots. Soil below copies it with depth + 1, soil beside it with spread + 1. Turns into roots (s2) when it can't grow further.",
+      "fields": {
+        "s2": {
+          "label": "Roots",
+          "short": "becomes",
+          "kind": "index",
+          "target": { "type": 2, "variant": 6 },
+          "description": "The tip turns into this when roots are below it or it reached max depth, with chance s4 x 0.0001 per step (60 if s4 is 0)."
+        },
+        "s4": {
+          "label": "Root speed",
+          "short": "speed",
+          "kind": "speed",
+          "scale": 0.0001,
+          "default": 30,
+          "description": "Chance per step to grow one cell down. Side roots use s4 x 0.00005."
+        },
+        "s5": {
+          "label": "Max depth",
+          "short": "depth",
+          "kind": "limit",
+          "default": 8,
+          "description": "Maximum depth below the seed."
+        },
+        "s6": {
+          "label": "Max side spread",
+          "short": "spread",
+          "kind": "limit",
+          "default": 3,
+          "description": "Maximum sideways distance of side roots."
+        },
+        "s7": {
+          "label": "Max branches per level",
+          "short": "branches",
+          "kind": "limit",
+          "default": 2,
+          "description": "Roots stop growing into a cell once this many root cells are in the 3x3 ring on its level."
+        }
+      }
+    },
+    "6": {
+      "name": "Roots",
+      "description": "Finished roots. No parameters; never changes.",
+      "fields": {}
+    }
+  }
+}
