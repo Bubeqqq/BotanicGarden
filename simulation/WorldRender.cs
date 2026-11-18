@@ -2,7 +2,9 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using BotanicGarden.Simulation;
+using BotanicGarden.WorldGen;
+
+namespace BotanicGarden.Simulation;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct InteractionPushConstant

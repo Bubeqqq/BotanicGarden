@@ -1,6 +1,8 @@
 using Godot;
 using System;
 
+namespace BotanicGarden.Menu;
+
 public partial class Exit : Button
 {
 	// Called when the node enters the scene tree for the first time.

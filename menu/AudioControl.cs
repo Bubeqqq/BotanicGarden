@@ -1,6 +1,8 @@
 using Godot;
 using System;
 
+namespace BotanicGarden.Menu;
+
 public partial class AudioControl : HSlider
 {
 	[Export] private AudioStreamPlayer _audioPlayer;

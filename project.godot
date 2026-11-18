@@ -15,6 +15,10 @@ run/main_scene="uid://bdcc0xw23oamx"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 
+[autoload]
+
+SettingsBoot="*uid://c7u5f4hi4hpyy"
+
 [display]
 
 window/stretch/mode="canvas_items"

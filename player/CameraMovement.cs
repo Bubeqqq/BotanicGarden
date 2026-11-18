@@ -1,5 +1,8 @@
 using Godot;
 using System;
+using BotanicGarden.Simulation;
+
+namespace BotanicGarden.Player;
 
 public partial class CameraMovement : CharacterBody3D
 {

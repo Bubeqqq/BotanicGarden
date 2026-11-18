@@ -2,6 +2,8 @@ using Godot;
 using BotanicGarden.Common;
 using System;
 
+namespace BotanicGarden.WorldGen;
+
 /*
 Diamond-square heightmap generation, independent of any scene node.
 Used by WorldRender (initial terrain) and DiamondSquareGenerator (2D preview).

@@ -1,10 +1,12 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BotanicGarden.Player;
 using BotanicGarden.Simulation;
+
+namespace BotanicGarden.Ui.BlockSelector;
 
 public class VoxelAuxData
 {

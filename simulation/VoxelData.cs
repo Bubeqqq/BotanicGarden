@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+namespace BotanicGarden.Simulation;
+
 /*
     Indexes divided by types of voxels
  
@@ -40,97 +42,93 @@ using System.Text.Json.Serialization;
     Type 30: 61440-63487 -
     Type 31: 63488-65535 -
  */
-
-namespace BotanicGarden.Simulation
+public class VoxelData
 {
-    public class VoxelData
+    public static VoxelColor[] LoadColors()
     {
-        public static VoxelColor[] LoadColors()
+        using var file = FileAccess.Open("voxel_data/voxel_colors.json", FileAccess.ModeFlags.Read);
+        if (file == null)
         {
-            using var file = FileAccess.Open("voxel_data/voxel_colors.json", FileAccess.ModeFlags.Read);
-            if (file == null)
+            GD.PrintErr($"Nie można otworzyć pliku JSON: {FileAccess.GetOpenError()}");
+            return Array.Empty<VoxelColor>();
+        }
+
+        var jsonText = file.GetAsText();
+    
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
+        var colors = JsonSerializer.Deserialize<VoxelColor[]>(jsonText, options);
+        var result = new VoxelColor[ushort.MaxValue];
+
+        foreach (var color in colors)
+        {
+            result[color.Index] = color;
+        }
+
+
+        return result;
+    }
+    
+    public static VoxelDataStruct[] LoadStruct(string path)
+    {
+        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+        if (file == null)
+        {
+            GD.PrintErr($"Nie można otworzyć pliku JSON: {FileAccess.GetOpenError()}");
+            return Array.Empty<VoxelDataStruct>();
+        }
+
+        var jsonText = file.GetAsText();
+    
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
+        var array = JsonSerializer.Deserialize<VoxelDataStructSave[]>(jsonText, options);
+
+        var result = new VoxelDataStruct[ushort.MaxValue];
+
+        foreach (var data in array)
+        {
+            result[data.index] = new VoxelDataStruct()
             {
-                GD.PrintErr($"Nie można otworzyć pliku JSON: {FileAccess.GetOpenError()}");
-                return Array.Empty<VoxelColor>();
-            }
-
-            var jsonText = file.GetAsText();
-        
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
-            var colors = JsonSerializer.Deserialize<VoxelColor[]>(jsonText, options);
-            var result = new VoxelColor[ushort.MaxValue];
-
-            foreach (var color in colors)
-            {
-                result[color.Index] = color;
-            }
-
-
-            return result;
+                s0 = data.s0,
+                s1 = data.s1,
+                s2 = data.s2,
+                s3 = data.s3,
+                s4 = data.s4,
+                s5 = data.s5,
+                s6 = data.s6,
+                s7 = data.s7
+            };
         }
         
-        public static VoxelDataStruct[] LoadStruct(string path)
-        {
-            using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
-            if (file == null)
-            {
-                GD.PrintErr($"Nie można otworzyć pliku JSON: {FileAccess.GetOpenError()}");
-                return Array.Empty<VoxelDataStruct>();
-            }
-
-            var jsonText = file.GetAsText();
-        
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
-            var array = JsonSerializer.Deserialize<VoxelDataStructSave[]>(jsonText, options);
-
-            var result = new VoxelDataStruct[ushort.MaxValue];
-
-            foreach (var data in array)
-            {
-                result[data.index] = new VoxelDataStruct()
-                {
-                    s0 = data.s0,
-                    s1 = data.s1,
-                    s2 = data.s2,
-                    s3 = data.s3,
-                    s4 = data.s4,
-                    s5 = data.s5,
-                    s6 = data.s6,
-                    s7 = data.s7
-                };
-            }
-            
-            return result;
-        }
+        return result;
     }
+}
 
-    public struct VoxelColor
-    {
-        [JsonInclude]
-        public ushort Index;
-    
-        [JsonInclude]
-        public float R;
-    
-        [JsonInclude]
-        public float G;
-    
-        [JsonInclude]
-        public float B;
-    }
-    
-    [StructLayout(LayoutKind.Sequential, Pack = 2)]
-    public struct VoxelDataStruct
-    {
-        public ushort s0, s1, s2, s3, s4, s5, s6, s7;
-    }
-    
-    
-    [StructLayout(LayoutKind.Sequential, Pack = 2)]
-    public struct VoxelDataStructSave
-    {
-        public ushort index;
-        public ushort s0, s1, s2, s3, s4, s5, s6, s7;
-    }
+public struct VoxelColor
+{
+    [JsonInclude]
+    public ushort Index;
+
+    [JsonInclude]
+    public float R;
+
+    [JsonInclude]
+    public float G;
+
+    [JsonInclude]
+    public float B;
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 2)]
+public struct VoxelDataStruct
+{
+    public ushort s0, s1, s2, s3, s4, s5, s6, s7;
+}
+
+
+[StructLayout(LayoutKind.Sequential, Pack = 2)]
+public struct VoxelDataStructSave
+{
+    public ushort index;
+    public ushort s0, s1, s2, s3, s4, s5, s6, s7;
 }
 

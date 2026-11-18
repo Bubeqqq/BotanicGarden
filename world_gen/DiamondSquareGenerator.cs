@@ -1,5 +1,7 @@
 using Godot;
 
+namespace BotanicGarden.WorldGen;
+
 // 2D preview of the diamond-square heightmap (world_gen/height_map_preview.tscn).
 // The algorithm itself lives in DiamondSquare.cs.
 public partial class DiamondSquareGenerator : Sprite2D
