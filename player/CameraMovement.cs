@@ -25,6 +25,7 @@ public partial class CameraMovement : CharacterBody3D
 
     private Camera3D _camera;
     private float _exactRadius;
+    private bool transparent_soils = true;
     
     [Signal]
     public delegate void ExpandChunksEventHandler();
@@ -106,6 +107,13 @@ public partial class CameraMovement : CharacterBody3D
         {
             EmitSignal(SignalName.ShrinkVoxels);
         }
+
+        if (Input.IsActionJustPressed("Transparent_Soil"))
+        {
+            worldRender.SetTransparentSoil(transparent_soils);
+            transparent_soils = !transparent_soils;
+        }
+        
         if (Input.IsActionPressed("radius_up"))
         {
             _exactRadius += RadiusChangeSpeed * fDelta;
