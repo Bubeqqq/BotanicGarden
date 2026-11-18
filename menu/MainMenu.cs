@@ -17,7 +17,6 @@ public partial class MainMenu : Control
         HSlider vol_slider = GetNode<HSlider>($"OptionsPanel/AudioControl");
         _audioPlayer.Playing=true;
         vol_slider.Value = SettingsManager.Volume;
-        _audioPlayer.VolumeDb = Mathf.LinearToDb((float)SettingsManager.Volume);
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.

@@ -12,6 +12,7 @@ script = ExtResource("2_qcdiq")
 SelectedBlockColor = NodePath("CanvasLayer/MarginContainer/VBoxContainer/HBoxContainer/AspectRatioContainer/SelectedBlockColor")
 SelectedBlockLabel = NodePath("CanvasLayer/MarginContainer/VBoxContainer/HBoxContainer/SelectedBlockLabel")
 worldRender = NodePath("..")
+Sensitivity = 0.002
 RadiusLabel = NodePath("CanvasLayer/MarginContainer/VBoxContainer/RadiusLabel")
 DensityLabel = NodePath("CanvasLayer/MarginContainer/VBoxContainer/DensityLabel")
 
