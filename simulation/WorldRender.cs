@@ -101,6 +101,12 @@ public partial class WorldRender : Node3D
 		SetupInteractionShader("res://simulation/compute/interaction.glsl");
 		GD.Print("Done");
 	}
+
+    public void SetTransparentSoil(bool transparent)
+    {
+        _material.SetShaderParameter("transparent_soils", transparent);
+    }
+    
 	private void SetupInteractionShader(string path)
 	{
 		var shaderFile = GD.Load<RDShaderFile>(path);
@@ -301,7 +307,7 @@ public partial class WorldRender : Node3D
 	private void ApplyColorsAs2DTexture()
 	{
 		const int textureSize = 256;
-		var image = Image.CreateEmpty(textureSize, textureSize, false, Image.Format.Rgb8);
+		var image = Image.CreateEmpty(textureSize, textureSize, false, Image.Format.Rgba8);
 		var colors = VoxelData.LoadColors();
 		
 		for (var i = 0; i < ushort.MaxValue; i++)
@@ -309,7 +315,7 @@ public partial class WorldRender : Node3D
 			var x = i % textureSize;
 			var y = i / textureSize;
 			
-			var color = new Color(colors[i].R,  colors[i].G, colors[i].B);
+			var color = new Color(colors[i].R,  colors[i].G, colors[i].B, colors[i].A);
 			image.SetPixel(x, y, color);
 		}
 

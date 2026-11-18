@@ -5,6 +5,8 @@ uniform isampler3D image : filter_nearest, repeat_disable;
 uniform ivec3 grid_size = ivec3(128, 128, 128);
 uniform vec3 box_size = vec3(6.4, 6.4, 6.4);
 
+uniform bool transparent_soils = false;
+
 uniform sampler2D color_palette : source_color;
 uniform usampler2D highlight_data;
 varying vec3 local_camera_pos;
@@ -12,10 +14,6 @@ varying vec3 local_vertex_pos;
 varying flat ivec3 chunk_global_origin;
 
 bool is_solid(int state) {
-//     if (state <= 1 || state > 6143) {
-//         return false;
-//     }
-
     if (state < 1) {
         return false;
     }
@@ -48,37 +46,103 @@ vec2 intersect_box(vec3 orig, vec3 inv_dir, vec3 b_min, vec3 b_max) {
     return vec2(near, far);
 }
 
+bool check_highlight(ivec3 voxel_pos, uvec4 hl) {
+    if (hl.w == 0u) return false;
+
+    ivec3 center = ivec3(hl.xyz);
+    int r = int(hl.w) - 1;
+
+    int dx = voxel_pos.x - center.x;
+    int dz = voxel_pos.z - center.z;
+    int dy = abs(voxel_pos.y - center.y);
+
+    if (dy <= r + 2) {
+        int dist_sq = dx * dx + dz * dz;
+        int r_sq = r * r;
+
+        if (dist_sq <= r_sq) {
+            bool is_center = (dist_sq == 0);
+            bool is_border =
+            ((dx + 1) * (dx + 1) + dz * dz > r_sq) ||
+                    ((dx - 1) * (dx - 1) + dz * dz > r_sq) ||
+                    (dx * dx + (dz + 1) * (dz + 1) > r_sq) ||
+                    (dx * dx + (dz - 1) * (dz - 1) > r_sq);
+
+            return is_center || is_border;
+        }
+    }
+    return false;
+}
+
+vec4 add_colors(vec4 accum, vec4 src) {
+    float weight = src.a * (1.0 - accum.a);
+    accum.rgb += src.rgb * weight;
+    accum.a += weight;
+    return accum;
+}
+
 void fragment() {
     vec3 ray_dir = normalize(local_vertex_pos - local_camera_pos);
     vec3 inv_dir = 1.0 / max(abs(ray_dir), vec3(1e-5)) * sign(ray_dir);
-    
+
     vec2 hit = intersect_box(local_camera_pos, inv_dir, vec3(0.0), vec3(grid_size));
 
     if (hit.x > hit.y || hit.y < 0.0) {
         discard;
     }
-    
-    float start = max(hit.x, 0.0);
 
+    float start = max(hit.x, 0.0);
     vec3 current_pos = local_camera_pos + ray_dir * (start + 0.001);
 
     ivec3 map_pos = clamp(ivec3(floor(current_pos)), ivec3(0), grid_size - 1);
     vec3 delta_dist = abs(inv_dir);
     ivec3 ray_step = ivec3(sign(ray_dir));
     vec3 side_dist = (sign(ray_dir) * (vec3(map_pos) - current_pos) + (sign(ray_dir) * 0.5) + 0.5) * delta_dist;
-
-    vec3 mask = vec3(0.0);
-    int hit_state = 0;
     
+    vec3 mask = vec3(0.0, 1.0, 0.0);
+    if (hit.x > 0.0) {
+        vec3 t0 = (vec3(0.0) - local_camera_pos) * inv_dir;
+        vec3 t1 = (vec3(grid_size) - local_camera_pos) * inv_dir;
+        vec3 tmin = min(t0, t1);
+        mask = step(tmin.yzx, tmin.xyz) * step(tmin.zxy, tmin.xyz);
+    }
+
+    uvec4 hl = texelFetch(highlight_data, ivec2(0, 0), 0);
+    vec4 actual_color = vec4(0.0);
+
     for (int i = 0; i < 384; i++) {
         if (any(lessThan(vec3(map_pos), vec3(0.0))) || any(greaterThanEqual(vec3(map_pos), vec3(grid_size)))) {
             break;
         }
 
-        int state = texelFetch(image, chunk_global_origin + map_pos, 0).r;
-        if (is_solid(state)) { 
-            hit_state = state;
-            break;
+        ivec3 global_voxel = chunk_global_origin + map_pos;
+        int state = texelFetch(image, global_voxel, 0).r;
+
+        if (is_solid(state)) {
+            int x = state % 256;
+            int y = state / 256;
+            vec4 color = texelFetch(color_palette, ivec2(x, y), 0);
+            int type = (state >> 11) & 0x1F;
+            
+            if(type == 3 && transparent_soils){
+                color.a = 0.01;
+            }
+            
+            if (color.a > 0.0) {
+                float shade = mask.x * 0.8 + mask.y * 1.0 + mask.z * 0.6;
+                color.rgb *= shade;
+                
+                if (check_highlight(global_voxel, hl)) {
+                    color.rgb = mix(color.rgb, vec3(1.0, 1.0, 0.5), 0.35);
+                }
+                
+                actual_color = add_colors(actual_color, color);
+                
+                if (actual_color.a >= 0.995) {
+                    actual_color.a = 1.0;
+                    break;
+                }
+            }
         }
 
         mask = step(side_dist.xyz, min(side_dist.yzx, side_dist.zxy));
@@ -86,61 +150,10 @@ void fragment() {
         map_pos += ivec3(mask) * ray_step;
     }
 
-    if (!is_solid(hit_state)) {
+    if (actual_color.a <= 0.001) {
         discard;
     }
     
-    int x = hit_state % 256;
-    int y = hit_state / 256;
-    
-    vec3 color = texelFetch(color_palette, ivec2(x, y), 0).rgb;
-    
-    //rainbow color
-    //vec3 color = vec3(float(hit_state) / 255.0, 0.0, 1.0 - float(hit_state) / 255.0);
-
-    if (mask == vec3(0.0)) mask = vec3(0.0, 1.0, 0.0);
-
-    float shade = mask.x * 0.8 + mask.y * 1.0 + mask.z * 0.6;
-
-    float checker = float((map_pos.x + map_pos.y + map_pos.z) & 1) * 0.08;
-
-    ALBEDO = color * (shade);
-
-
-    uvec4 hl = texelFetch(highlight_data, ivec2(0, 0), 0);
-    
-    bool is_highlighted = false;
-    
-    if (hl.w > 0u) {
-        ivec3 center = ivec3(hl.xyz);
-        int r = int(hl.w) - 1; 
-        ivec3 current_voxel = chunk_global_origin + map_pos;
-        
-        int dx = current_voxel.x - center.x;
-        int dz = current_voxel.z - center.z;
-        int dy = abs(current_voxel.y - center.y);
-        
-        if (dy <= r + 2) {
-            int dist_sq = dx * dx + dz * dz;
-            int r_sq = r * r;
-            
-            if (dist_sq <= r_sq) {
-                bool is_center = (dist_sq == 0);
-                
-                bool is_border = 
-                    ((dx + 1) * (dx + 1) + dz * dz > r_sq) ||
-                    ((dx - 1) * (dx - 1) + dz * dz > r_sq) ||
-                    (dx * dx + (dz + 1) * (dz + 1) > r_sq) ||
-                    (dx * dx + (dz - 1) * (dz - 1) > r_sq);
-                
-                if (is_center || is_border) {
-                    is_highlighted = true;
-                }
-            }
-        }
-    }
-    
-    if (is_highlighted) {
-        ALBEDO = mix(ALBEDO, vec3(1.0, 1.0, 0.5), 0.35); 
-    }
+    ALBEDO = actual_color.rgb / actual_color.a;
+    ALPHA = actual_color.a;
 }

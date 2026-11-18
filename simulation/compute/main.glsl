@@ -43,7 +43,7 @@ uvec4 get_voxel(ivec3 pos, ivec3 grid_size) {
 void main() {
 	ivec3 position = ivec3(gl_GlobalInvocationID.xyz);
 	ivec3 grid_size = imageSize(input_img);
-
+    
     if (position.x >= grid_size.x || position.y >= grid_size.y || position.z >= grid_size.z) { //if voxel is out of bounds
         return;
     }

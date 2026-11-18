@@ -116,6 +116,9 @@ public struct VoxelColor
 
     [JsonInclude]
     public float B;
+
+    [JsonInclude] 
+    public float A;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 2)]
