@@ -80,6 +80,10 @@ public partial class WorldRender : Node3D
     //Analysis Shader
     private Rid _analysisShader, _analysisPipeline;
     private Rid _analysisUniformSetA;
+    private Rid _analysisVoxelCount;
+    private int _framesPerAnalysis = 20;
+    private int _frameTimer = 0;
+    private uint _analysisBufferSize;
 	
 	public override void _Ready()
 	{
@@ -99,6 +103,8 @@ public partial class WorldRender : Node3D
 		SetComputeShader("res://simulation/compute/main.glsl", 0.02f);
 
 		SetupInteractionShader("res://simulation/compute/interaction.glsl");
+        SetupAnalysisShader("res://simulation/compute/Analasis.glsl");
+        
 		GD.Print("Done");
 	}
 
@@ -150,10 +156,20 @@ public partial class WorldRender : Node3D
             UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit,
             TextureType = RenderingDevice.TextureType.Type2D
         };
+        
+        var voxelCounts = new int[short.MaxValue + 1];
+        byte[] voxelByte = MemoryMarshal.AsBytes(voxelCounts.AsSpan()).ToArray();
+        _analysisBufferSize = (uint)voxelByte.Length;
+        _analysisVoxelCount = _rd.StorageBufferCreate((uint)voxelByte.Length, voxelByte);
+        
+        var voxelCountUniform = new RDUniform { UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 1 };
+        voxelCountUniform.AddId(_analysisVoxelCount);
 
         var uniformA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
         uniformA.AddId(_texA);
-        _analysisUniformSetA = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformA}, _analysisShader, 0);
+        
+        
+        _analysisUniformSetA = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformA, voxelCountUniform}, _analysisShader, 0);
     }
     
     
@@ -396,6 +412,19 @@ public partial class WorldRender : Node3D
 		_material.SetShaderParameter("image", _displayTexA);
 	}
  
+    private void OnAnalysisCompleted(byte[] rawBytes)
+    {
+        ReadOnlySpan<int> voxelCounts = MemoryMarshal.Cast<byte, int>(rawBytes);
+        
+        GD.Print($"Voxele o indeksie 0: {voxelCounts[0]}");
+        GD.Print($"Voxele o indeksie 1: {voxelCounts[1]}");
+        GD.Print($"Voxele o indeksie 2: {voxelCounts[2]}");
+        GD.Print($"Voxele o indeksie 3: {voxelCounts[3]}");
+        GD.Print($"Voxele o indeksie 4: {voxelCounts[4]}");
+        GD.Print($"Voxele o indeksie 5: {voxelCounts[5]}");
+        GD.Print();
+    }
+    
 	public override void _Process(double delta)
 	{
 		_timer += delta;
@@ -403,7 +432,8 @@ public partial class WorldRender : Node3D
 		if (_timer > _timePerSimulation)
 		{
 			_timer -= _timePerSimulation;
-		}
+            _frameTimer += 1;
+        }
 		else
 		{
 			return;
@@ -434,6 +464,30 @@ public partial class WorldRender : Node3D
 		    _interactionRequested = false;
 		    _highlightRequested = false;
 	    }
+
+        if (_frameTimer >= _framesPerAnalysis && _useAtoB)
+        {
+            _frameTimer = 0;
+            
+            _rd.ComputeListEnd();
+            
+            _rd.BufferClear(_analysisVoxelCount, 0, _analysisBufferSize);
+            computeList = _rd.ComputeListBegin();
+            
+            _rd.ComputeListBindComputePipeline(computeList, _analysisPipeline);
+            
+            _rd.ComputeListBindUniformSet(computeList, _analysisUniformSetA, 0);
+            
+            _rd.ComputeListDispatch(computeList, 
+                (uint)Mathf.CeilToInt(_gridWidth / _workGroupSize.X), 
+                (uint)Mathf.CeilToInt(_gridHeight / _workGroupSize.Y), 
+                (uint)Mathf.CeilToInt(_gridDepth / _workGroupSize.Z));
+            _rd.ComputeListEnd();
+            _rd.BufferGetDataAsync(_analysisVoxelCount, Callable.From<byte[]>(OnAnalysisCompleted));
+            
+            computeList = _rd.ComputeListBegin();
+        }
+        
 		_rd.ComputeListBindComputePipeline(computeList, _pipeline);
 		
 		var currentUniformSet = _useAtoB ? _uniformSetAtoB : _uniformSetBtoA;
@@ -455,32 +509,42 @@ public partial class WorldRender : Node3D
 		_useAtoB = !_useAtoB;
 	}
 	
-	public override void _Notification(int what)
-	{
-		if (what == NotificationPredelete && _rd != null)
-		{
-			if (_texA.IsValid)
-			{
-				_displayTexA.TextureRdRid = new Rid();
-				_rd.FreeRid(_texA);
-			}
-			if (_texB.IsValid)
-			{
-				_displayTexB.TextureRdRid = new Rid();
-				_rd.FreeRid(_texB);
-			}
-			
-			if(_shader.IsValid) 
-				_rd.FreeRid(_shader);
-		}
-	}
+    public override void _Notification(int what)
+    {
+        if (what == NotificationPredelete && _rd != null)
+        {
+            if (_texA.IsValid)
+            {
+                _displayTexA.TextureRdRid = new Rid();
+                _rd.FreeRid(_texA);
+            }
+            if (_texB.IsValid)
+            {
+                _displayTexB.TextureRdRid = new Rid();
+                _rd.FreeRid(_texB);
+            }
+            if (_highlightTex.IsValid)
+            {
+                _displayHighlightTex.TextureRdRid = new Rid();
+                _rd.FreeRid(_highlightTex);
+            }
+            
+            if (_voxelData.IsValid) _rd.FreeRid(_voxelData);
+            if (_plantIndex.IsValid) _rd.FreeRid(_plantIndex);
+            if (_analysisVoxelCount.IsValid) _rd.FreeRid(_analysisVoxelCount);
+            
+            if (_shader.IsValid) _rd.FreeRid(_shader);
+            if (_interactionShader.IsValid) _rd.FreeRid(_interactionShader);
+            if (_analysisShader.IsValid) _rd.FreeRid(_analysisShader);
+        }
+    }
 
 	public void UpdateHighlightRay(Vector3 start, Vector3 dir, float maxDist, int radius = 0)
 	{
 		start /= _voxelSize;
 		maxDist /= _voxelSize;
 		_highlightData = new InteractionPushConstant
-		{
+		{            // Jeśli wydzielisz osobny bufor dla analizy, zwolnij go również tutaj:
 			StartX = start.X, StartY = start.Y, StartZ = start.Z, MaxDist = maxDist,
 			DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = -1,
 			Radius = radius,

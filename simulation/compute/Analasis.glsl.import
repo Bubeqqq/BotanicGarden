@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://d2di76428e22w"
+path="res://.godot/imported/Analasis.glsl-467f4fe0e722ec2f3f628b2002beb914.res"
+
+[deps]
+
+source_file="res://simulation/compute/Analasis.glsl"
+dest_files=["res://.godot/imported/Analasis.glsl-467f4fe0e722ec2f3f628b2002beb914.res"]
+
+[params]
+

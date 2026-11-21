@@ -5,7 +5,7 @@ uvec4 check_flower_roots(uvec4[3][3][3] neighbors, uvec3 pos, uint seed) {
     uvec4 directly_above = neighbors[1][2][1];
     if (is_flower_sub(directly_above, 0u)) { // Above is seed
         FlowerData seed_d = get_flower_data(directly_above.r);
-        if (seed_d.s4 != 0u) { // Create growable roots
+        if (seed_d.s4 != 0u && directly_above.g > 1u) { // Create growable roots
             new_value.r = seed_d.s4;
             new_value.g = directly_above.g;
             new_value.b = pack_plant_size(1u, 0u);
