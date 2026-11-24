@@ -3,19 +3,20 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using BotanicGarden.WorldGen;
+using System.Reflection.Metadata;
 
 namespace BotanicGarden.Simulation;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct InteractionPushConstant
 {
-	public float StartX, StartY, StartZ, MaxDist; 
-	public float DirX, DirY, DirZ;                
-	public int ActionType;                        
-	public int Radius;                           
-	public float Seed;                            
-	public float Density;                         
-	private float _pad0;                          
+	public float StartX, StartY, StartZ, MaxDist;
+	public float DirX, DirY, DirZ;
+	public int ActionType;
+	public int Radius;
+	public float Seed;
+	public float Density;
+	private float _pad0;
 }
 public partial class WorldRender : Node3D
 {
@@ -25,7 +26,7 @@ public partial class WorldRender : Node3D
 	private const int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
 	private const int _gridWidth = 256, _gridDepth = 256, _gridHeight = 128;
 	private const int _minTerrainHeight = 10, _maxTerrainHeight = 60;
-	private const int _terrainHeight = _maxTerrainHeight - _minTerrainHeight;
+	private const float _waterPercentage = 0.4f;
 	
 	//  -GPU
 	private Vector3 _workGroupSize = new Vector3(8, 4, 8);
@@ -355,52 +356,8 @@ public partial class WorldRender : Node3D
 		};
 		var view = new RDTextureView();
 
-		var map = DiamondSquare.Generate(_gridWidth, _gridDepth, DiamondSquare.StartIterForRegionSize(_gridWidth, _gridDepth, 128));
-		// DiamondSquare.StandardizeMinMax(map, _gridWidth, _gridDepth);
-		DiamondSquare.Standardize(map, _gridWidth, _gridDepth, .16f);
-		
-		var whichFlower = false;
-		var initialData = new ushort[VoxelCount * 4];
-		for (var i = 0; i < VoxelCount; i++)
-		{
-			//rainbow
-			//initialData[idx] = (short)(i % 254 + 1);
-			var x = i % _gridWidth;
-			var y = (i / _gridWidth) % _gridHeight;
-			var z = i / (_gridWidth * _gridHeight);
-			
-			var idx = i * 4;
-
-			if (y <= (int)(map[x, z] * _terrainHeight) + _minTerrainHeight)
-			{
-				initialData[idx] = 6144;
-			}
-			else if ( y == (int)(map[x, z] * _terrainHeight) + _minTerrainHeight + 1 && GD.Randf() < 0.003f)
-			{
-				initialData[idx] = whichFlower ? (ushort)4096 : (ushort)4101;
-				whichFlower = !whichFlower;
-			}
-			else
-			{
-				initialData[idx] = 0;
-			}
-			
-			// if(y <= 15)
-			// 	initialData[idx] = 6144;
-			// else if (y == 16 && x % 16 == 0 && z % 16 == 0)
-   //          {
-   //              //initialData[idx] = whichFlower ? (short)4096 : (short)4101;
-   //              whichFlower = !whichFlower;
-   //          }
-   //          else
-			// 	initialData[idx] = 0;
-			// 		
-			initialData[idx + 1] = 1;
-			initialData[idx + 2] = 1;
-			initialData[idx + 3] = 1;
-		}
-
-		//initialData[200000] = 2;
+		// Generate World
+		var initialData = WorldGenerator.Generate(_gridWidth, _gridDepth, _gridHeight, _minTerrainHeight, _maxTerrainHeight, _waterPercentage);
 		
 		byte[] initialBytes = new byte[VoxelCount * 8];
 		Buffer.BlockCopy(initialData, 0, initialBytes, 0, initialBytes.Length);

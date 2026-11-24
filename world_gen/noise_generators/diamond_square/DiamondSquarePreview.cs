@@ -4,7 +4,7 @@ namespace BotanicGarden.WorldGen;
 
 // 2D preview of the diamond-square heightmap (world_gen/height_map_preview.tscn).
 // The algorithm itself lives in DiamondSquare.cs.
-public partial class DiamondSquareGenerator : Sprite2D
+public partial class DiamondSquarePreview : Sprite2D
 {
     [Export] public int Width = (1 << 8) + 1;
     [Export] public int Height = (1 << 8) + 1;
