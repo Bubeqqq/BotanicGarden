@@ -80,9 +80,13 @@ uvec4 calculate_flower(uvec4[3][3][3] neighbors, uvec3 pos, uint seed) {
             }
         }
     } else if (d.s0 == 0u) { // seed
-        if (is_flower_sub(neighbors[1][2][1], 1u) || is_flower_sub(neighbors[1][2][1], 2u)) {
-            if (d.s3 != 0u) {
-                new_value.r = d.s3;
+        if(new_value.g <= 1){
+            new_value.g = get_next_plant_index();
+        }else{
+            if (is_flower_sub(neighbors[1][2][1], 1u) || is_flower_sub(neighbors[1][2][1], 2u)) {
+                if (d.s3 != 0u) {
+                    new_value.r = d.s3;
+                }
             }
         }
     }
