@@ -17,7 +17,8 @@
     "4108": "growable_roots_2",
     "4109": "roots",
     "8192": "Falling_voxel",
-    "8193": "Water (temporary)"
+    "8193": "Water (temporary)",
+    "1": "Void"
   },
   "groups": {
     "Kwiat1": [

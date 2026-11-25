@@ -14,7 +14,7 @@ varying vec3 local_vertex_pos;
 varying flat ivec3 chunk_global_origin;
 
 bool is_solid(int state) {
-    if (state < 1) {
+    if (state <= 1) {
         return false;
     }
     

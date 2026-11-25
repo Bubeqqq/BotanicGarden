@@ -35,7 +35,7 @@ uvec4 get_voxel(ivec3 pos, ivec3 grid_size) {
 	if (pos.x < 0 || pos.x >= grid_size.x ||
 		pos.y < 0 || pos.y >= grid_size.y ||
 		pos.z < 0 || pos.z >= grid_size.z) {
-		return uvec4(0, 0, 0, 0);
+		return uvec4(1, 0, 0, 0);
 	}
 	return imageLoad(input_img, pos);
 }
