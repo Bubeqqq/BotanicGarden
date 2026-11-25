@@ -63,15 +63,6 @@ public static class WorldGenerator
             Math.Min(maxWorld.Y, maxModel.Y),
             Math.Min(maxWorld.Z, maxModel.Z)
         );
-        
-        GD.PrintS("minWorld", minWorld);
-        GD.PrintS("maxWorld", maxWorld);
-
-        GD.PrintS("minModel", minModel);
-        GD.PrintS("maxModel", maxModel);
-        
-        GD.PrintS("min", min);
-        GD.PrintS("max", max);
 
         for (int x = min.X; x < max.X; ++x)
         {
