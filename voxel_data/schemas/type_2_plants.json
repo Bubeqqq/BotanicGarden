@@ -2,7 +2,7 @@
   "type": 2,
   "name": "Plants",
   "shader": "simulation/compute/flower.glslinc",
-  "description": "Plant parts. Stalks, flower centres and leaves grow into air (air.glslinc), roots grow into soil (soil.glslinc). One species is a set of plant voxels that point at each other through their index fields. The .b channel holds height (low byte) and spread (high byte).",
+  "description": "Plant parts. Stalks, flower centres and leaves grow into air (air.glslinc), roots grow into soil (soil.glslinc). One species is a set of plant voxels that point at each other through their index fields. The .g channel holds the plant id (given to the seed, copied to every part that grows from it; 0 and 1 mean none yet), the .b channel height (low byte) and spread (high byte). Analysis.glsl counts the voxels of each plant id and records its species (s1).",
   "variant_field": "s0",
   "fields": {
     "s0": {
@@ -15,14 +15,14 @@
       "label": "Species id",
       "short": "species",
       "kind": "species",
-      "read": false,
-      "description": "Informational, not read by the shader. By convention the same for all parts of one species."
+      "max": 2047,
+      "description": "Read by Analysis.glsl, which counts the voxels of each plant and records the species of the first voxel it counts. Give all parts of one species the same id and every species its own id. 0 = the species isn't recorded. At most 2047 (stored in the top 11 bits of the count)."
     }
   },
   "variants": {
     "0": {
       "name": "Seed",
-      "description": "Placed on soil. Spawns growable roots below and, with the germination chance, a growable stalk above. Turns into a stalk once a stalk is above it.",
+      "description": "Placed on soil. On its first step it takes a new plant id (.g). After that it spawns growable roots below and, with the germination chance, a growable stalk above, both carrying that id. Turns into a stalk once a stalk is above it.",
       "fields": {
         "s2": {
           "label": "Growable stalk",
@@ -43,7 +43,7 @@
           "short": "roots tip",
           "kind": "index",
           "target": { "type": 2, "variant": 5 },
-          "description": "Spawned straight away (no chance roll) in the soil cell directly below the seed, at depth 1."
+          "description": "Spawned straight away (no chance roll) in the soil cell directly below the seed, at depth 1, once the seed has its plant id."
         },
         "s5": {
           "label": "Germination speed",
@@ -51,7 +51,7 @@
           "kind": "speed",
           "scale": 0.0001,
           "default": 1,
-          "description": "Chance per step that the air above the seed becomes the growable stalk (s2)."
+          "description": "Chance per step that the air above the seed becomes the growable stalk (s2). Starts once the seed has its plant id."
         }
       }
     },

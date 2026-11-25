@@ -17,6 +17,8 @@ layout(set = 0, binding = 2, std430) restrict buffer VoxelDataBuffer {
     MyDataStruct voxelData[];
 };
 
+// Species id = plant s1, see res://voxel_data/schemas/type_2_plants.json (update it if this changes).
+// Stored in the top 11 bits of the count, so ids above 2047 don't fit.
 uint getFlowerSpeciesID(uint index){
     uvec4 raw = voxelData[index].packedData;
     return bitfieldExtract(raw.x, 16, 16);

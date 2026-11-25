@@ -15,15 +15,15 @@
     "4107": "roots_1",
     "4108": "growable_roots_2",
     "4109": "roots_2",
-    "4110": "seed_3",
-    "4111": "growable_stalk_3",
-    "4112": "stalk_3",
-    "4113": "flower_center_3",
-    "4114": "flower_leaf_3_1",
-    "4115": "growable_roots_3",
-    "4116": "roots_3",
-    "4117": "flower_leaf_3_2",
-    "4118": "flower_leaf_3_3",
+    "4110": "seed_4",
+    "4111": "growable_stalk_4",
+    "4112": "stalk_4",
+    "4113": "flower_center_4",
+    "4114": "flower_leaf_4_1",
+    "4115": "growable_roots_4",
+    "4116": "roots_4",
+    "4117": "flower_leaf_4_2",
+    "4118": "flower_leaf_4_3",
     "6144": "Dirt_1",
     "8192": "Falling_voxel",
     "8193": "Water (temporary)"
@@ -47,7 +47,7 @@
       4108,
       4109
     ],
-    "Kwiat3": [
+    "Kwiat4": [
       4110,
       4111,
       4112,

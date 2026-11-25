@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dj3ftbapapqio"]
 
-[ext_resource type="Script" uid="uid://c044pskwwv3bj" path="res://world_gen/DiamondSquareGenerator.cs" id="1_q4e01"]
+[ext_resource type="Script" uid="uid://c044pskwwv3bj" path="res://world_gen/noise_generators/diamond_square/DiamondSquarePreview.cs" id="1_q4e01"]
 
 [node name="HeightMapGeneration" type="Node2D" unique_id=1696295769]
 

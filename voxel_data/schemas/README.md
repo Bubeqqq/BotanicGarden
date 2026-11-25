@@ -35,6 +35,7 @@ Field keys:
 | `scale` | `speed` only: chance per step = value × scale |
 | `target` | `index` only: `{ "type": 2, "variant": 1 }`, what the referenced voxel should be (`variant` may also be a list) |
 | `read` | `false` if the shader currently ignores the field |
+| `max` | Largest value the shaders can handle, when lower than 65535 (e.g. species id: 2047) |
 
 Kinds:
 
@@ -43,5 +44,5 @@ Kinds:
 - `speed`: chance per simulation step (50 steps per second), value × `scale`. 0 = use `default`.
 - `limit`: count or distance. 0 = use `default` (or what `zero` says).
 - `flag`: 0 = off, anything else = on.
-- `species`: id shared by all parts of one species.
+- `species`: id shared by all parts of one species, different for every species (`Analysis.glsl` groups plant counts by it; 0 = not recorded).
 - `number`: plain number.

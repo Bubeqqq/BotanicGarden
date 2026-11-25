@@ -127,6 +127,7 @@ class FieldSpec:
         self.scale = d.get("scale")
         self.target = d.get("target") or {}
         self.read = d.get("read", True)
+        self.max = d.get("max")  # largest value the shaders can handle, if below 65535
 
     def target_type(self):
         return self.target.get("type")
@@ -951,8 +952,33 @@ class App:
                     p = self.target_problem(spec, vals[s])
                     if p:
                         out.append(f"s{s} ({spec.label}): {p}.")
+                if spec and spec.max is not None and vals[s] > spec.max:
+                    out.append(f"s{s} ({spec.label}) = {vals[s]} is above the maximum {spec.max}.")
+                if spec and spec.kind == "species":
+                    out.extend(self._species_problems(idx, s, vals[s]))
         if not self.model.name(idx) and not self.model.groups_of(idx):
             out.append("No name and no group: the in-game block selector doesn't show it.")
+        return out
+
+    def _species_problems(self, idx, slot, v) -> list[str]:
+        """Species id checks: Analysis.glsl groups plant counts by it."""
+        if v == 0:
+            return [f"s{slot} species id is 0: the analysis shader doesn't record a species for it."]
+        out = []
+        t = type_of(idx)
+        my_groups = set(self.model.groups_of(idx))
+        same_type = [i for i in self.model.indices() if type_of(i) == t and i != idx]
+        if my_groups:
+            mates = [i for i in same_type if my_groups & set(self.model.groups_of(i))]
+            other_ids = sorted({self.model.values(i)[slot] for i in mates} - {v})
+            if other_ids:
+                out.append(f"s{slot} species id {v} differs from others in its group ({other_ids}).")
+            strangers = [i for i in same_type if self.model.groups_of(i) and not my_groups & set(self.model.groups_of(i))
+                         and self.model.values(i)[slot] == v]
+            if strangers:
+                gs = sorted({g for i in strangers for g in self.model.groups_of(i)})
+                out.append(f"s{slot} species id {v} is also used by group(s) {', '.join(gs)}: "
+                           f"the analysis would count them as one species.")
         return out
 
     def group_problems(self, g) -> list[str]:
@@ -1008,7 +1034,13 @@ class App:
         if spec.kind == "flag":
             return (("on" if v else "off") + note, False)
         if spec.kind == "species":
-            return ("shared by all parts of a species" + note, False)
+            if v == 0:
+                return ("0 → species not recorded" + note, True)
+            if spec.max is not None and v > spec.max:
+                return (f"⚠ above the maximum {spec.max}", True)
+            return ("shared by all parts of a species, unique per species" + note, False)
+        if spec.max is not None and v > spec.max:
+            return (f"⚠ above the maximum {spec.max}", True)
         return (note.strip(), False)
 
     # ------------------------------------------------------------------ undo / dirty

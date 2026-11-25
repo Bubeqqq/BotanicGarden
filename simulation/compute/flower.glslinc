@@ -3,7 +3,8 @@
 Plant voxels (type 2). What s0..s7 mean for each plant part (s0) is defined in
 res://voxel_data/schemas/type_2_plants.json (labels, defaults, speed scales, which part an
 index field must point at). The block editor reads that file. Update it when changing
-the rules here, in air.glslinc (check_flower) or in soil.glslinc (check_flower_roots).
+the rules here, in air.glslinc (check_flower), in soil.glslinc (check_flower_roots) or
+in Analysis.glsl (reads s1 as the species id).
 
 s0: 0 seed, 1 growable stalk, 2 stalk, 3 flower center, 4 flower leaf, 5 growable roots, 6 roots
 
