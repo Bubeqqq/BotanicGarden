@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using BotanicGarden.WorldGen;
 using System.Reflection.Metadata;
+using System.Numerics;
 
 namespace BotanicGarden.Simulation;
 
@@ -357,7 +358,8 @@ public partial class WorldRender : Node3D
 		var view = new RDTextureView();
 
 		// Generate World
-		var initialData = WorldGenerator.Generate(_gridWidth, _gridDepth, _gridHeight, _minTerrainHeight, _maxTerrainHeight, _waterPercentage);
+		var worldSize = new Vector3I(_gridWidth, _gridHeight, _gridDepth);
+		var initialData = WorldGenerator.Generate(worldSize, _minTerrainHeight, _maxTerrainHeight, _waterPercentage);
 		
 		byte[] initialBytes = new byte[VoxelCount * 8];
 		Buffer.BlockCopy(initialData, 0, initialBytes, 0, initialBytes.Length);
