@@ -25,7 +25,8 @@ public partial class CameraMovement : CharacterBody3D
 
     private Camera3D _camera;
     private float _exactRadius;
-    private bool transparent_soils = true;
+    private bool _transparentSoils = false;
+    private bool _terrainVisualisation = false;
     
     [Signal]
     public delegate void ExpandChunksEventHandler();
@@ -110,8 +111,14 @@ public partial class CameraMovement : CharacterBody3D
 
         if (Input.IsActionJustPressed("Transparent_Soil"))
         {
-            worldRender.SetTransparentSoil(transparent_soils);
-            transparent_soils = !transparent_soils;
+            _transparentSoils = !_transparentSoils;
+            worldRender.SetTransparentSoil(_transparentSoils);
+        }
+        
+        if (Input.IsActionJustPressed("Terrain_Visualisation"))
+        {
+            _terrainVisualisation = !_terrainVisualisation;
+            worldRender.SetTerrainVisualisation(_terrainVisualisation);
         }
         
         if (Input.IsActionPressed("radius_up"))

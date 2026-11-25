@@ -130,6 +130,11 @@ public partial class WorldRender : Node3D
         _material.SetShaderParameter("transparent_soils", transparent);
     }
     
+    public void SetTerrainVisualisation(bool visualisation)
+    {
+        _material.SetShaderParameter("show_territories", visualisation);
+    }
+    
 	private void SetupInteractionShader(string path)
 	{
 		var shaderFile = GD.Load<RDShaderFile>(path);

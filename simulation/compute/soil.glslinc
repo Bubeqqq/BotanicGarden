@@ -13,30 +13,45 @@ uvec4 check_flower_roots(uvec4[3][3][3] neighbors, uvec3 pos, uint seed) {
     float r = rand_fast(pos, seed);
 
     uvec4 roots = is_root_nearby(neighbors);
-    if (roots.r != 0u && new_value.b < 10u) {
+    uvec4 strongest_any = is_soil_territory_nearby(neighbors);
+    uvec4 strongest_same = (new_value.g > 1u) ? is_soil_territory_nearby(neighbors, new_value.g) : uvec4(0u);
+    
+    if (roots.r != 0u) {
         FlowerData info = get_flower_data(roots.r);
-        new_value.g = info.s1;
-        new_value.b = 10u; // Territory Spread
-        return new_value;
-    }
-
-    uvec4 territory = is_soil_territory_nearby(neighbors);
-    
-    if (territory.r != 0u && territory.b > new_value.b) {
-        new_value.g = territory.g;
-        new_value.b = territory.b - 1u;
-        return new_value;
-    }
-    
-    if (new_value.g > 1u && territory.r == 0u) {
-        if (new_value.b > 1u) {
-            new_value.b -= 1u;
-        } else {
-            new_value.g = 1u;
-            new_value.b = 0u;
+        if (info.s1 > 1u) {
+            new_value.g = info.s1;
+            new_value.b = 10u;
         }
-        return new_value;
+    } else if (new_value.g <= 1u) {
+        if (strongest_any.r != 0u && strongest_any.g > 1u && strongest_any.b > 1u) {
+            new_value.g = strongest_any.g;
+            new_value.b = strongest_any.b - 1u;
+        }
+    } else {
+        bool has_stronger_same = (strongest_same.r != 0u && strongest_same.b > new_value.b);
+        bool has_stronger_other = (strongest_any.r != 0u && strongest_any.g != new_value.g && strongest_any.b > new_value.b);
+
+        if (has_stronger_other) {
+            new_value.g = strongest_any.g;
+            new_value.b = strongest_any.b - 1u;
+        } else if (strongest_same.r != 0u && strongest_same.b > 1u) {
+            uint next_b = strongest_same.b - 1u;
+            if (next_b > new_value.b) {
+                new_value.b = next_b;
+            }
+        }
+        
+        if (!has_stronger_same && !has_stronger_other) {
+            if (new_value.b > 1u) {
+                new_value.b -= 1u;
+            } else {
+                new_value.g = 1u;
+                new_value.b = 0u;
+            }
+        }
     }
+    
+    neighbors[1][1][1] = new_value;
     
     uvec4 directly_above = neighbors[1][2][1];
     if (is_flower_sub(directly_above, 0u)) { // Above is seed
