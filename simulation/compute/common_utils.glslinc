@@ -46,6 +46,55 @@ FlowerData get_flower_data(uint index) {
     return d;
 }
 
+uvec4 is_root_nearby(uvec4[3][3][3] neighbors){
+    for (int x = 0; x < 3; x++) {
+        for (int y = 0; y < 3; y++) {
+            for (int z = 0; z < 3; z++) {
+                if(x == 1 && y == 1 && z == 1){
+                    continue;
+                }
+                
+                uint r = neighbors[x][y][z].r;
+                uint type = (r >> 11) & 0x1F;
+                if(type == 2){
+                    uint s0 = get_flower_data(r).s0;
+                    
+                    if(s0 == 5 || s0 == 6){
+                        return neighbors[x][y][z];
+                    }
+                }
+            }
+        }
+    }
+    
+    return uvec4(0u);
+}
+
+uvec4 is_soil_territory_nearby(uvec4[3][3][3] neighbors) {
+    uvec4 best = uvec4(0u);
+    uint best_b = 0u;
+
+    for (int x = 0; x < 3; x++) {
+        for (int y = 0; y < 3; y++) {
+            for (int z = 0; z < 3; z++) {
+                if (x == 1 && y == 1 && z == 1) {
+                    continue;
+                }
+
+                uvec4 nb = neighbors[x][y][z];
+                uint type = (nb.r >> 11) & 0x1Fu;
+
+                if (type == 3u && nb.g > 1u && nb.b > best_b) {
+                    best_b = nb.b;
+                    best = nb;
+                }
+            }
+        }
+    }
+
+    return best;
+}
+
 bool is_flower_sub(uvec4 voxel, uint target_s0) {
     uint type = (voxel.r >> 11u) & 0x1Fu;
     if (type != 2u) return false;

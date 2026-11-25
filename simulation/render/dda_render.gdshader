@@ -14,7 +14,7 @@ varying vec3 local_vertex_pos;
 varying flat ivec3 chunk_global_origin;
 
 bool is_solid(int state) {
-    if (state < 1) {
+    if (state <= 1) {
         return false;
     }
     
@@ -81,6 +81,24 @@ vec4 add_colors(vec4 accum, vec4 src) {
     return accum;
 }
 
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+vec3 high_contrast_color(uint idx) {
+    const float GOLDEN_RATIO_CONJUGATE = 0.61803398875;
+    
+    float hue = fract(float(idx) * GOLDEN_RATIO_CONJUGATE);
+    
+    float parity = float(idx & 1u);
+    float sat = mix(0.85, 1.0, 1.0 - parity * 0.5);
+    float val = mix(1.0, 0.78, parity);
+
+    return hsv2rgb(vec3(hue, sat, val));
+}
+
 void fragment() {
     vec3 ray_dir = normalize(local_vertex_pos - local_camera_pos);
     vec3 inv_dir = 1.0 / max(abs(ray_dir), vec3(1e-5)) * sign(ray_dir);
@@ -116,16 +134,25 @@ void fragment() {
         }
 
         ivec3 global_voxel = chunk_global_origin + map_pos;
-        int state = texelFetch(image, global_voxel, 0).r;
-
+        ivec4 voxel = texelFetch(image, global_voxel, 0);
+        int state = voxel.r;
+        int g_factor = voxel.g ;
+        
         if (is_solid(state)) {
             int x = state % 256;
             int y = state / 256;
             vec4 color = texelFetch(color_palette, ivec2(x, y), 0);
             int type = (state >> 11) & 0x1F;
             
-            if(type == 3 && transparent_soils){
-                color.a = 0.01;
+            if(type == 3){ // Toogle for transparent soils
+                if(transparent_soils){
+                    color.a = 0.01;
+                }
+                
+                //Change color for plant territories
+                if(g_factor > 1){
+                    color = vec4(high_contrast_color(uint(g_factor)), color.a);
+                }
             }
             
             if (color.a > 0.0) {
