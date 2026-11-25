@@ -665,7 +665,8 @@ class App:
         self.nav.tag_configure("type", font=self.font_bold)
         self.nav.bind("<<TreeviewSelect>>", lambda e: self.refresh_table())
         self.nav.bind("<Button-3>", self._nav_menu)
-        self.nav.bind("<Double-1>", lambda e: self.rename_nav_item())
+        # Double-click is left to the treeview (it expands / collapses a type); rename is F2 or the button.
+        self.nav.bind("<F2>", lambda e: self.rename_nav_item())
         self.nav.bind("<Motion>", self._nav_motion)
         self.nav.bind("<Leave>", lambda e: self._hide_nav_tip())
         self._nav_tip = (None, None)
@@ -674,7 +675,7 @@ class App:
         grid.pack(fill="x", pady=(6, 0))
         for i, (text, cmd, tip) in enumerate([
             ("New group", self.new_group, "New group from the selected rows"),
-            ("Rename", self.rename_nav_item, "Rename the selected group or type label (or double-click it)"),
+            ("Rename", self.rename_nav_item, "Rename the selected group or type label (F2)"),
             ("Duplicate", self.duplicate_nav_group,
              "Copy the whole group as a new species: new indices, links inside the group pointed at the "
              "copies, a new species id, names renumbered (seed_3 -> seed_4)"),
@@ -713,6 +714,7 @@ class App:
 
         self.tree.bind("<<TreeviewSelect>>", lambda e: self.on_table_select())
         self.tree.bind("<Double-1>", self._on_table_double)
+        self.tree.bind("<Button-1>", self._on_table_click, add="+")
         self.tree.bind("<Return>", lambda e: self.open_selected())
         self.tree.bind("<Delete>", lambda e: self.delete_selection())
         self.tree.bind("<F2>", lambda e: self.change_index())
@@ -1293,6 +1295,14 @@ class App:
         if cmp_idx != self.compare_idx:
             self.compare_idx = cmp_idx
             self.update_compare()
+
+    def _on_table_click(self, e):
+        # A click in the empty area below the rows clears the selection (and with it the comparison).
+        if self.tree.identify_region(e.x, e.y) == "nothing":
+            self.tree.selection_set(())
+            self.tree.focus("")
+            return "break"
+        return None
 
     def _on_table_double(self, e):
         if self.tree.identify_region(e.x, e.y) == "heading":
@@ -2206,12 +2216,30 @@ class App:
 
     def _save_ui_state(self):
         try:
-            state = {"geometry": self.root.geometry(), "open": self.open_idx, "nav": self.nav_key(),
-                     "sashes": [self.paned.sashpos(i) for i in range(2)]}
+            state = {"geometry": self.root.geometry(), "open": self.open_idx, "nav": self.nav_key()}
+            w = self.paned.winfo_width()
+            if w > 300:
+                # Fractions of the paned width, so they still fit on a screen of another size.
+                state["sash_fractions"] = [round(self.paned.sashpos(i) / w, 4) for i in range(2)]
             with open(STATE_FILE, "w", encoding="utf-8") as f:
                 json.dump(state, f)
         except Exception:
             pass
+
+    MIN_PANE = 160  # px; a divider closer than this to an edge or to the other divider counts as broken
+
+    def _sash_positions(self, w, fractions):
+        """Divider positions for paned width w: the saved fractions if they still make sense, else defaults."""
+        if isinstance(fractions, list) and len(fractions) == 2:
+            try:
+                a, b = (int(float(f) * w) for f in fractions)
+                if self.MIN_PANE <= a and a + self.MIN_PANE <= b <= w - self.MIN_PANE:
+                    return a, b
+            except (TypeError, ValueError):
+                pass
+        a = min(195, w // 5)
+        b = max(a + self.MIN_PANE, w - 535)
+        return a, min(b, w - self.MIN_PANE)
 
     def _restore_ui_state(self):
         try:
@@ -2219,12 +2247,6 @@ class App:
                 state = json.load(f)
         except Exception:
             state = {}
-        if not state.get("sashes"):
-            def default_sashes():
-                w = self.paned.winfo_width()
-                self.paned.sashpos(0, 195)
-                self.paned.sashpos(1, max(700, w - 535))
-            self.root.after(60, default_sashes)
         if state.get("geometry"):
             self.root.geometry(state["geometry"])
         if state.get("nav") and self.nav.exists(state["nav"]):
@@ -2232,15 +2254,31 @@ class App:
             self.refresh_table()
         if state.get("open") is not None and self.model.exists(state["open"]):
             self.open_voxel(state["open"], push_history=False)
-        sashes = state.get("sashes")
-        if sashes:
-            def apply():
-                for i, p in enumerate(sashes):
-                    try:
-                        self.paned.sashpos(i, p)
-                    except tk.TclError:
-                        pass
-            self.root.after(50, apply)
+
+        # Place the dividers only once the window is really laid out. Setting them earlier (a fixed
+        # delay was used before) can run while the paned window is still 1 px wide on a slower PC,
+        # which pins both dividers to the left edge.
+        fractions = state.get("sash_fractions")
+        pending = {"job": None, "done": False}
+
+        def apply():
+            pending["job"] = None
+            w = self.paned.winfo_width()
+            if pending["done"] or w <= 300:
+                return
+            a, b = self._sash_positions(w, fractions)
+            self.paned.sashpos(0, a)
+            self.paned.sashpos(1, b)
+            pending["done"] = True
+            self.paned.unbind("<Configure>", bind_id)
+
+        def on_configure(_e):
+            # Configure fires several times while the window settles; act after the last one.
+            if pending["job"]:
+                self.paned.after_cancel(pending["job"])
+            pending["job"] = self.paned.after(80, apply)
+
+        bind_id = self.paned.bind("<Configure>", on_configure, add="+")
 
 
 def main():
