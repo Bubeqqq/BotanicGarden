@@ -3,19 +3,21 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using BotanicGarden.WorldGen;
+using System.Reflection.Metadata;
+// using System.Numerics;
 
 namespace BotanicGarden.Simulation;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct InteractionPushConstant
 {
-	public float StartX, StartY, StartZ, MaxDist; 
-	public float DirX, DirY, DirZ;                
-	public int ActionType;                        
-	public int Radius;                           
-	public float Seed;                            
-	public float Density;                         
-	private float _pad0;                          
+	public float StartX, StartY, StartZ, MaxDist;
+	public float DirX, DirY, DirZ;
+	public int ActionType;
+	public int Radius;
+	public float Seed;
+	public float Density;
+	private float _pad0;
 }
 public partial class WorldRender : Node3D
 {
@@ -25,7 +27,7 @@ public partial class WorldRender : Node3D
 	private const int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
 	private const int _gridWidth = 256, _gridDepth = 256, _gridHeight = 128;
 	private const int _minTerrainHeight = 10, _maxTerrainHeight = 60;
-	private const int _terrainHeight = _maxTerrainHeight - _minTerrainHeight;
+	private const float _waterPercentage = 0.4f;
 	
 	//  -GPU
 	private Vector3 _workGroupSize = new Vector3(8, 4, 8);
@@ -80,6 +82,14 @@ public partial class WorldRender : Node3D
     //Analysis Shader
     private Rid _analysisShader, _analysisPipeline;
     private Rid _analysisUniformSetA;
+    private Rid _analysisVoxelCount;
+    private int _framesPerAnalysis = 20;
+    private int _frameTimer = 0;
+    private uint _analysisBufferSize;
+    
+    private readonly byte[] _simPushConstant = new byte[4];
+    private readonly byte[] _interactPushBytes = new byte[Marshal.SizeOf<InteractionPushConstant>()];
+    private Callable _onAnalysisCompletedCallable;
 	
 	public override void _Ready()
 	{
@@ -94,11 +104,15 @@ public partial class WorldRender : Node3D
 		ApplyColorsAs2DTexture();
 		SetupChunks();
 		SetupPingPongBuffers();
+        
+        _onAnalysisCompletedCallable = Callable.From<byte[]>(OnAnalysisCompleted);
 		
 		SetupComputeShaderData("res://voxel_data/voxel_data.json");
 		SetComputeShader("res://simulation/compute/main.glsl", 0.02f);
 
 		SetupInteractionShader("res://simulation/compute/interaction.glsl");
+        SetupAnalysisShader("res://simulation/compute/Analysis.glsl");
+        
 		GD.Print("Done");
 	}
 
@@ -143,17 +157,22 @@ public partial class WorldRender : Node3D
         var shaderFile = GD.Load<RDShaderFile>(path);
         _analysisShader = _rd.ShaderCreateFromSpirV(shaderFile.GetSpirV());
         _analysisPipeline = _rd.ComputePipelineCreate(_analysisShader);
-
-        var fmt = new RDTextureFormat {
-            Width = 1, Height = 1, Depth = 1,
-            Format = RenderingDevice.DataFormat.R16G16B16A16Uint,
-            UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit,
-            TextureType = RenderingDevice.TextureType.Type2D
-        };
+        
+        _analysisBufferSize = (ushort.MaxValue + 1) * sizeof(uint);
+        _analysisVoxelCount = _rd.StorageBufferCreate(_analysisBufferSize);
 
         var uniformA = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
         uniformA.AddId(_texA);
-        _analysisUniformSetA = _rd.UniformSetCreate(new Godot.Collections.Array<RDUniform> { uniformA}, _analysisShader, 0);
+
+        var voxelCountUniform = new RDUniform { UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 1 };
+        voxelCountUniform.AddId(_analysisVoxelCount);
+
+        var voxelDataUniform = new RDUniform { UniformType = RenderingDevice.UniformType.StorageBuffer, Binding = 2 };
+        voxelDataUniform.AddId(_voxelData);
+
+        _analysisUniformSetA = _rd.UniformSetCreate(
+            new Godot.Collections.Array<RDUniform> { uniformA, voxelCountUniform, voxelDataUniform },
+            _analysisShader, 0);
     }
     
     
@@ -338,53 +357,9 @@ public partial class WorldRender : Node3D
 		};
 		var view = new RDTextureView();
 
-		var map = DiamondSquare.Generate(_gridWidth, _gridDepth, DiamondSquare.StartIterForRegionSize(_gridWidth, _gridDepth, 128));
-		// DiamondSquare.StandardizeMinMax(map, _gridWidth, _gridDepth);
-		DiamondSquare.Standardize(map, _gridWidth, _gridDepth, .16f);
-		
-		var whichFlower = false;
-		var initialData = new ushort[VoxelCount * 4];
-		for (var i = 0; i < VoxelCount; i++)
-		{
-			//rainbow
-			//initialData[idx] = (short)(i % 254 + 1);
-			var x = i % _gridWidth;
-			var y = (i / _gridWidth) % _gridHeight;
-			var z = i / (_gridWidth * _gridHeight);
-			
-			var idx = i * 4;
-
-			if (y <= (int)(map[x, z] * _terrainHeight) + _minTerrainHeight)
-			{
-				initialData[idx] = 6144;
-			}
-			else if ( y == (int)(map[x, z] * _terrainHeight) + _minTerrainHeight + 1 && GD.Randf() < 0.003f)
-			{
-				// initialData[idx] = whichFlower ? (ushort)4096 : (ushort)4101;
-				// whichFlower = !whichFlower;
-				initialData[idx] = (ushort)4110;
-			}
-			else
-			{
-				initialData[idx] = 0;
-			}
-			
-			// if(y <= 15)
-			// 	initialData[idx] = 6144;
-			// else if (y == 16 && x % 16 == 0 && z % 16 == 0)
-   //          {
-   //              //initialData[idx] = whichFlower ? (short)4096 : (short)4101;
-   //              whichFlower = !whichFlower;
-   //          }
-   //          else
-			// 	initialData[idx] = 0;
-			// 		
-			initialData[idx + 1] = 1;
-			initialData[idx + 2] = 1;
-			initialData[idx + 3] = 1;
-		}
-
-		//initialData[200000] = 2;
+		// Generate World
+		var worldSize = new Vector3I(_gridWidth, _gridHeight, _gridDepth);
+		var initialData = WorldGenerator.Generate(worldSize, _minTerrainHeight, _maxTerrainHeight, _waterPercentage);
 		
 		byte[] initialBytes = new byte[VoxelCount * 8];
 		Buffer.BlockCopy(initialData, 0, initialBytes, 0, initialBytes.Length);
@@ -397,91 +372,128 @@ public partial class WorldRender : Node3D
 		_material.SetShaderParameter("image", _displayTexA);
 	}
  
+    private void OnAnalysisCompleted(byte[] rawBytes)
+    {
+        ReadOnlySpan<uint> voxelCounts = MemoryMarshal.Cast<byte, uint>(rawBytes);
+
+        for (int i = 0; i < 10; i++)
+        {
+            uint packed = voxelCounts[i];
+            GD.Print($"Voxele o indeksie {i}: Count: {packed & 0x1FFFFFu}, Gatunek: {packed >> 21}");
+        }
+        GD.Print();
+    }
+    
 	public override void _Process(double delta)
-	{
-		_timer += delta;
+    {
+        _timer += delta;
 
-		if (_timer > _timePerSimulation)
-		{
-			_timer -= _timePerSimulation;
-		}
-		else
-		{
-			return;
-		}
-		var computeList = _rd.ComputeListBegin();
+        if (_timer > _timePerSimulation)
+        {
+            _timer -= _timePerSimulation;
+            _frameTimer += 1;
+        }
+        else
+        {
+            return;
+        }
 
+        uint groupsX = (uint)Mathf.CeilToInt(_gridWidth / _workGroupSize.X);
+        uint groupsY = (uint)Mathf.CeilToInt(_gridHeight / _workGroupSize.Y);
+        uint groupsZ = (uint)Mathf.CeilToInt(_gridDepth / _workGroupSize.Z);
 
-	    bool runInteract = _interactionRequested || _highlightRequested;
-	    if (runInteract)
-	    {
-		    _rd.ComputeListBindComputePipeline(computeList, _interactionPipeline);
-		    
-		    var interactSet = _useAtoB ? _interactUniformSetA : _interactUniformSetB;
-		    _rd.ComputeListBindUniformSet(computeList, interactSet, 0);
+        bool runAnalysis = _frameTimer >= _framesPerAnalysis && _useAtoB;
+        if (runAnalysis)
+        {
+            _frameTimer = 0;
+            _rd.BufferClear(_analysisVoxelCount, 0, _analysisBufferSize);
+        }
+        
+        if (_interactionRequested || _highlightRequested)
+        {
+            var interactList = _rd.ComputeListBegin();
+            _rd.ComputeListBindComputePipeline(interactList, _interactionPipeline);
 
-		    var currentData = _interactionRequested ? _interactionData : _highlightData;
+            var interactSet = _useAtoB ? _interactUniformSetA : _interactUniformSetB;
+            _rd.ComputeListBindUniformSet(interactList, interactSet, 0);
 
-		    byte[] pushData = new byte[Marshal.SizeOf(currentData)];
-		    IntPtr ptr = Marshal.AllocHGlobal(pushData.Length);
-		    Marshal.StructureToPtr(currentData, ptr, true);
-		    Marshal.Copy(ptr, pushData, 0, pushData.Length);
-		    Marshal.FreeHGlobal(ptr);
+            var currentData = _interactionRequested ? _interactionData : _highlightData;
+            MemoryMarshal.Write(_interactPushBytes, in currentData);
 
-		    _rd.ComputeListSetPushConstant(computeList, pushData, (uint)pushData.Length);
-		    _rd.ComputeListDispatch(computeList, 1, 1, 1);
-		    _rd.ComputeListAddBarrier(computeList); 
+            _rd.ComputeListSetPushConstant(interactList, _interactPushBytes, (uint)_interactPushBytes.Length);
+            _rd.ComputeListDispatch(interactList, 1, 1, 1);
+            _rd.ComputeListEnd();
 
-		    _interactionRequested = false;
-		    _highlightRequested = false;
-	    }
-		_rd.ComputeListBindComputePipeline(computeList, _pipeline);
-		
-		var currentUniformSet = _useAtoB ? _uniformSetAtoB : _uniformSetBtoA;
-		_rd.ComputeListBindUniformSet(computeList, currentUniformSet, 0);
-		
-		var pushConstant = BitConverter.GetBytes(GD.Randi());
-		_rd.ComputeListSetPushConstant(computeList, pushConstant, (uint)pushConstant.Length);
-		
-		_rd.ComputeListDispatch(computeList, 
-			(uint)Mathf.CeilToInt(_gridWidth / _workGroupSize.X), 
-			(uint)Mathf.CeilToInt(_gridHeight / _workGroupSize.Y), 
-			(uint)Mathf.CeilToInt(_gridDepth / _workGroupSize.Z));
-		
-		_rd.ComputeListAddBarrier(computeList);
-		
-		_rd.ComputeListEnd();
-		
-		_material.SetShaderParameter("image", _useAtoB ? _displayTexB : _displayTexA);
-		_useAtoB = !_useAtoB;
-	}
+            _interactionRequested = false;
+            _highlightRequested = false;
+        }
+        
+        if (runAnalysis)
+        {
+            var analysisList = _rd.ComputeListBegin();
+            _rd.ComputeListBindComputePipeline(analysisList, _analysisPipeline);
+            _rd.ComputeListBindUniformSet(analysisList, _analysisUniformSetA, 0);
+            _rd.ComputeListDispatch(analysisList, groupsX, groupsY, groupsZ);
+            _rd.ComputeListEnd();
+        }
+        
+        var simList = _rd.ComputeListBegin();
+        _rd.ComputeListBindComputePipeline(simList, _pipeline);
+
+        var currentUniformSet = _useAtoB ? _uniformSetAtoB : _uniformSetBtoA;
+        _rd.ComputeListBindUniformSet(simList, currentUniformSet, 0);
+
+        BitConverter.TryWriteBytes(_simPushConstant, GD.Randi());
+        _rd.ComputeListSetPushConstant(simList, _simPushConstant, (uint)_simPushConstant.Length);
+
+        _rd.ComputeListDispatch(simList, groupsX, groupsY, groupsZ);
+        _rd.ComputeListEnd();
+        
+        if (runAnalysis)
+        {
+            _rd.BufferGetDataAsync(_analysisVoxelCount, _onAnalysisCompletedCallable);
+        }
+
+        _material.SetShaderParameter("image", _useAtoB ? _displayTexB : _displayTexA);
+        _useAtoB = !_useAtoB;
+    }
 	
-	public override void _Notification(int what)
-	{
-		if (what == NotificationPredelete && _rd != null)
-		{
-			if (_texA.IsValid)
-			{
-				_displayTexA.TextureRdRid = new Rid();
-				_rd.FreeRid(_texA);
-			}
-			if (_texB.IsValid)
-			{
-				_displayTexB.TextureRdRid = new Rid();
-				_rd.FreeRid(_texB);
-			}
-			
-			if(_shader.IsValid) 
-				_rd.FreeRid(_shader);
-		}
-	}
+    public override void _Notification(int what)
+    {
+        if (what == NotificationPredelete && _rd != null)
+        {
+            if (_texA.IsValid)
+            {
+                _displayTexA.TextureRdRid = new Rid();
+                _rd.FreeRid(_texA);
+            }
+            if (_texB.IsValid)
+            {
+                _displayTexB.TextureRdRid = new Rid();
+                _rd.FreeRid(_texB);
+            }
+            if (_highlightTex.IsValid)
+            {
+                _displayHighlightTex.TextureRdRid = new Rid();
+                _rd.FreeRid(_highlightTex);
+            }
+            
+            if (_voxelData.IsValid) _rd.FreeRid(_voxelData);
+            if (_plantIndex.IsValid) _rd.FreeRid(_plantIndex);
+            if (_analysisVoxelCount.IsValid) _rd.FreeRid(_analysisVoxelCount);
+            
+            if (_shader.IsValid) _rd.FreeRid(_shader);
+            if (_interactionShader.IsValid) _rd.FreeRid(_interactionShader);
+            if (_analysisShader.IsValid) _rd.FreeRid(_analysisShader);
+        }
+    }
 
 	public void UpdateHighlightRay(Vector3 start, Vector3 dir, float maxDist, int radius = 0)
 	{
 		start /= _voxelSize;
 		maxDist /= _voxelSize;
 		_highlightData = new InteractionPushConstant
-		{
+		{            // Jeśli wydzielisz osobny bufor dla analizy, zwolnij go również tutaj:
 			StartX = start.X, StartY = start.Y, StartZ = start.Z, MaxDist = maxDist,
 			DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = -1,
 			Radius = radius,

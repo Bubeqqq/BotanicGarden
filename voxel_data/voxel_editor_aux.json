@@ -25,7 +25,8 @@
     "4117": "flower_leaf_3_2",
     "4118": "flower_leaf_3_3",
     "6144": "Dirt_1",
-    "8192": "Falling_voxel"
+    "8192": "Falling_voxel",
+    "8193": "Water (temporary)"
   },
   "groups": {
     "Kwiat1": [

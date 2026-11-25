@@ -96,7 +96,7 @@ uvec4 check_flower(uvec4[3][3][3] neighbors, uvec3 pos, uint seed) {
         }
     }
     
-    if (is_flower_sub(bottom_voxel, 0u)) { // Below is seed
+    if (is_flower_sub(bottom_voxel, 0u)&& bottom_voxel.g != 1u) { // Below is seed
         FlowerData seed_d = get_flower_data(bottom_voxel.r);
         float germ_speed = float(seed_d.s5 > 0u ? seed_d.s5 : 1u) * 0.0001;
 
