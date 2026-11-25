@@ -6,6 +6,7 @@ uniform ivec3 grid_size = ivec3(128, 128, 128);
 uniform vec3 box_size = vec3(6.4, 6.4, 6.4);
 
 uniform bool transparent_soils = false;
+uniform bool show_territories = false;
 
 uniform sampler2D color_palette : source_color;
 uniform usampler2D highlight_data;
@@ -150,7 +151,7 @@ void fragment() {
                 }
                 
                 //Change color for plant territories
-                if(g_factor > 1){
+                if(g_factor > 1 && show_territories){
                     color = vec4(high_contrast_color(uint(g_factor)), color.a);
                 }
             }
