@@ -142,5 +142,18 @@ namespace BotanicGarden.Common
             if (width <= 0 || width > a.GetLength(0)) throw new ArgumentOutOfRangeException(nameof(width));
             if (height <= 0 || height > a.GetLength(1)) throw new ArgumentOutOfRangeException(nameof(height));
         }
+
+        public static int[,] Convert(this float[,] source, Func<float, int> formula)
+        {
+            int rows = source.GetLength(0);
+            int cols = source.GetLength(1);
+            var result = new int[rows, cols];
+
+            for (int i = 0; i < rows; i++)
+                for (int j = 0; j < cols; j++)
+                    result[i, j] = formula(source[i, j]);
+
+            return result;
+        }
     }
 }

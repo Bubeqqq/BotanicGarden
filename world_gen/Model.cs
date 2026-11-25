@@ -2,12 +2,14 @@ using Godot;
 
 namespace BotanicGarden.WorldGen;
 
-public struct Model
+public class Model(Vector3I origin, Vector3I size, ushort[] data)
 {
-    // public int origin_x;
-    // public int origin_z;
-    // public int origin_y;
-    public Vector3I origin;
-    public Vector3I size;
-    public ushort [] data;
+    public Vector3I origin = origin;
+    public Vector3I size = size;
+    public ushort[] data = data;
+
+    public override string ToString()
+    {
+        return $"origin: {origin}\nsize{size}\ndata{string.Join(", ", data)}";
+    }
 }

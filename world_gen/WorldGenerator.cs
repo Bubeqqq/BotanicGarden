@@ -1,6 +1,6 @@
 using Godot;
 using System;
-using System.Numerics;
+using BotanicGarden.Common;
 
 namespace BotanicGarden.WorldGen;
 
@@ -8,15 +8,16 @@ public static class WorldGenerator
 {
     private const ushort WATER_IDX = 8193;
     private const ushort DIRT_IDX = 6144;
+    private const ushort STONE_IDX = 2048;
     private const ushort AIR_IDX = 0;
 
-    private static int CoordsToIndex(Vector3I coords, Vector3I gridSize)
+    private static int CoordsToNo(Vector3I coords, Vector3I size)
     {
-        var index = coords.X + (coords.Y  + coords.Z * gridSize.Y) * gridSize.X;
+        var index = coords.X + (coords.Y  + coords.Z * size.Y) * size.X;
         return index;
     }
 
-    private static Vector3I IndexToCoords(int index, Vector3I gridSize)
+    private static Vector3I NoToCoords(int index, Vector3I gridSize)
     {
         var x = index % gridSize.X;
         var y = index / gridSize.X % gridSize.Y;
@@ -31,11 +32,78 @@ public static class WorldGenerator
         return false;
     }
 
-    private static bool PasteModel(ushort[] world, Vector3I gridSize, Model model, Vector3I position, ushort[] allowedSpawnBlockTypes)
+    private static void CopyBlock(ushort[]toTable, int toNumber, ushort[] fromTable, int fromNumber)
     {
-        if (!BlockInBlockList(world[CoordsToIndex(position-model.origin, gridSize)], allowedSpawnBlockTypes)) return false;
+        toTable[4 * toNumber    ] = fromTable[4 * fromNumber    ];
+        toTable[4 * toNumber + 1] = fromTable[4 * fromNumber + 1];
+        toTable[4 * toNumber + 2] = fromTable[4 * fromNumber + 2];
+        toTable[4 * toNumber + 3] = fromTable[4 * fromNumber + 3];
+    }
+
+    private static bool PasteModel(ushort[] world, Vector3I gridSize, Vector3I position, Model model, ushort[] allowedSpawnBlockTypes, ushort[] allowedReplaceBlockTypes)
+    {
+        ushort spawnBlock = world[4 * CoordsToNo(position-model.origin, gridSize)];
+        if (!BlockInBlockList(spawnBlock, allowedSpawnBlockTypes)) return false;
+
         // todo: implement
+
+        var minWorld = position;
+        var maxWorld = gridSize - position;
+
+        var minModel = model.origin;
+        var maxModel = model.size - model.origin;
+
+        var min = -new Vector3I(
+            Math.Min(minWorld.X, minModel.X),
+            Math.Min(minWorld.Y, minModel.Y),
+            Math.Min(minWorld.Z, minModel.Z)
+        );
+        var max = new Vector3I(
+            Math.Min(maxWorld.X, maxModel.X),
+            Math.Min(maxWorld.Y, maxModel.Y),
+            Math.Min(maxWorld.Z, maxModel.Z)
+        );
+        
+        GD.PrintS("minWorld", minWorld);
+        GD.PrintS("maxWorld", maxWorld);
+
+        GD.PrintS("minModel", minModel);
+        GD.PrintS("maxModel", maxModel);
+        
+        GD.PrintS("min", min);
+        GD.PrintS("max", max);
+
+        for (int x = min.X; x < max.X; ++x)
+        {
+            for (int y = min.Y; y < max.Y; ++y)
+            {
+                for (int z = min.Z; z < max.Z; ++z)
+                {
+                    var p = new Vector3I(x, y, z);
+                    Vector3I coordsWorld = p + position;
+                    Vector3I coordsModel = p + model.origin;
+                    int noWorld = CoordsToNo(coordsWorld, gridSize);
+                    int noModel = CoordsToNo(coordsModel, model.size);
+
+                    if (!BlockInBlockList(world[4 * noWorld], allowedReplaceBlockTypes)) continue;
+                    CopyBlock(world, noWorld, model.data, noModel);
+                }
+            }
+        }
+
         return true;
+    }
+
+    public static void ScatterModel(ushort[] world, Vector3I gridSize, Model model, int count, int verticalOffset, int[,] heightMap, ushort[] allowedSpawnBlockTypes, ushort[] allowedReplaceBlockTypes)
+    {
+        var random = new Random();
+        for (int i = 0; i < count; ++i)
+        {
+            int x = random.Next() % heightMap.GetLength(0);
+            int z = random.Next() % heightMap.GetLength(1);
+            var position = new Vector3I(x, heightMap[x, z] + verticalOffset, z);
+            if (!PasteModel(world, gridSize, position, model, allowedSpawnBlockTypes, allowedReplaceBlockTypes)) --i;
+        }
     }
 
     public static ushort[] Generate(
@@ -54,6 +122,7 @@ public static class WorldGenerator
         // Generate Height Map
         var map = DiamondSquare.Generate(gridSize.X, gridSize.Z, DiamondSquare.StartIterForRegionSize(gridSize.X, gridSize.Z, 128));
         DiamondSquare.Standardize(map, gridSize.X, gridSize.Z, .175f);
+        int[,] heightMap = map.Convert(x => (int)((x * terrainHeight) + minTerrainHeight));
 
         // Generate Landmass and Water
         for (var i = 0; i < VoxelCount; i++)
@@ -63,9 +132,7 @@ public static class WorldGenerator
             var z = i / (gridSize.X * gridSize.Y);
             var idx = i * 4;
 
-            var surfaceLevel = (int)(map[x, z] * terrainHeight) + minTerrainHeight;
-
-            if (y <= surfaceLevel)
+            if (y <= heightMap[x, z])
             {
                 world[idx] = DIRT_IDX;
             }
@@ -86,7 +153,39 @@ public static class WorldGenerator
         // Todo: implement
 
         // Scatter rocks
-        // Todo: implement
+        // Todo: fix
+        var rock_test = new Model(
+            new Vector3I(1, 1, 1),
+            new Vector3I(3, 3, 3),
+            [
+                AIR_IDX  ,0,0,0, STONE_IDX,0,0,0, STONE_IDX,0,0,0,
+                STONE_IDX,0,0,0, AIR_IDX  ,0,0,0, STONE_IDX,0,0,0,
+                STONE_IDX,0,0,0, STONE_IDX,0,0,0, STONE_IDX,0,0,0,
+
+                AIR_IDX  ,0,0,0, STONE_IDX,0,0,0, STONE_IDX,0,0,0,
+                AIR_IDX  ,0,0,0, STONE_IDX,0,0,0, STONE_IDX,0,0,0,
+                STONE_IDX,0,0,0, AIR_IDX  ,0,0,0, AIR_IDX  ,0,0,0,
+
+                STONE_IDX,0,0,0, STONE_IDX,0,0,0, AIR_IDX  ,0,0,0,
+                STONE_IDX,0,0,0, STONE_IDX,0,0,0, STONE_IDX,0,0,0,
+                AIR_IDX  ,0,0,0, STONE_IDX,0,0,0, STONE_IDX,0,0,0
+            ]
+        );
+        // PasteModel(world, gridSize, new Vector3I(128, 64, 128), rock_test, [AIR_IDX, DIRT_IDX, WATER_IDX], [AIR_IDX, DIRT_IDX, WATER_IDX]);
+        ScatterModel(world, gridSize, rock_test, 20, 1, heightMap, [AIR_IDX, DIRT_IDX, WATER_IDX], [AIR_IDX, DIRT_IDX, WATER_IDX]);
+
+        // var random_size = new Vector3I(20, 20, 20);
+        // var random_len = random_size.X * random_size.Y * random_size.Z;
+        // var random_array = new ushort[random_len];
+        // var random = new Random();
+        // for (int i = 0; i < random_len; ++i) random_array[i] = (random.Next() % 2 == 0) ? STONE_IDX : AIR_IDX;
+        // var rock_test2 = new Model(
+        //     random_size / 2,
+        //     random_size,
+        //     random_array
+        // );
+        // // GD.PrintS(rock_test2);
+        // PasteModel(world, gridSize, new Vector3I(128, 64, 128), rock_test2, [AIR_IDX, DIRT_IDX, WATER_IDX], [AIR_IDX, DIRT_IDX, WATER_IDX]);
 
         // Scatter seeds
         // Todo: implement

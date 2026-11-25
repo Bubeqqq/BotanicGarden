@@ -1,6 +1,8 @@
 {
   "voxel_names": {
     "0": "Air",
+    "1": "Void",
+    "2048": "Stone",
     "4096": "Seed_1",
     "4097": "Growable_stalk_1",
     "4098": "stalk_1",
@@ -26,8 +28,7 @@
     "4118": "flower_leaf_4_3",
     "6144": "Dirt_1",
     "8192": "Falling_voxel",
-    "8193": "Water (temporary)",
-    "1": "Void"
+    "8193": "Water (temporary)"
   },
   "groups": {
     "Kwiat1": [
