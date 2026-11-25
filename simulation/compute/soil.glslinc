@@ -1,6 +1,40 @@
+/*
+
+    R - index
+    G - flower territory
+    B - flower territory distance
+    A - 
+
+*/
 uvec4 check_flower_roots(uvec4[3][3][3] neighbors, uvec3 pos, uint seed) {
     uvec4 new_value = neighbors[1][1][1];
     float r = rand_fast(pos, seed);
+
+    uvec4 roots = is_root_nearby(neighbors);
+    if (roots.r != 0u && new_value.b < 10u) {
+        FlowerData info = get_flower_data(roots.r);
+        new_value.g = info.s1;
+        new_value.b = 10u; // Territory Spread
+        return new_value;
+    }
+
+    uvec4 territory = is_soil_territory_nearby(neighbors);
+    
+    if (territory.r != 0u && territory.b > new_value.b) {
+        new_value.g = territory.g;
+        new_value.b = territory.b - 1u;
+        return new_value;
+    }
+    
+    if (new_value.g > 1u && territory.r == 0u) {
+        if (new_value.b > 1u) {
+            new_value.b -= 1u;
+        } else {
+            new_value.g = 1u;
+            new_value.b = 0u;
+        }
+        return new_value;
+    }
     
     uvec4 directly_above = neighbors[1][2][1];
     if (is_flower_sub(directly_above, 0u)) { // Above is seed

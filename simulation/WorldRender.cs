@@ -89,6 +89,15 @@ public partial class WorldRender : Node3D
     private readonly byte[] _simPushConstant = new byte[4];
     private readonly byte[] _interactPushBytes = new byte[Marshal.SizeOf<InteractionPushConstant>()];
     private Callable _onAnalysisCompletedCallable;
+    
+    //FPS counter
+    
+    private double _fpsAccumTime = 0.0;
+    private int _fpsFrames = 0;
+    private int _currentFps = 0;
+
+    private int _simStepsCounter = 0;
+    private double _currentSimStepsPerSec = 0.0;
 	
 	public override void _Ready()
 	{
@@ -377,19 +386,35 @@ public partial class WorldRender : Node3D
         for (int i = 0; i < 10; i++)
         {
             uint packed = voxelCounts[i];
-            GD.Print($"Voxele o indeksie {i}: Count: {packed & 0x1FFFFFu}, Gatunek: {packed >> 21}");
+            //GD.Print($"Voxele o indeksie {i}: Count: {packed & 0x1FFFFFu}, Gatunek: {packed >> 21}");
         }
         GD.Print();
     }
     
 	public override void _Process(double delta)
     {
+        _fpsAccumTime += delta;
+        _fpsFrames++;
+
+        if (_fpsAccumTime >= 0.5)
+        {
+            _currentFps = Mathf.RoundToInt(_fpsFrames / _fpsAccumTime);
+            _currentSimStepsPerSec = _simStepsCounter / _fpsAccumTime;
+
+            GD.Print($"FPS: {_currentFps} | Sim/s: {_currentSimStepsPerSec:0.0}");
+
+            _fpsAccumTime = 0.0;
+            _fpsFrames = 0;
+            _simStepsCounter = 0;
+        }
+        
         _timer += delta;
 
         if (_timer > _timePerSimulation)
         {
             _timer -= _timePerSimulation;
             _frameTimer += 1;
+            _simStepsCounter++;
         }
         else
         {
@@ -491,7 +516,7 @@ public partial class WorldRender : Node3D
 		start /= _voxelSize;
 		maxDist /= _voxelSize;
 		_highlightData = new InteractionPushConstant
-		{            // Jeśli wydzielisz osobny bufor dla analizy, zwolnij go również tutaj:
+		{
 			StartX = start.X, StartY = start.Y, StartZ = start.Z, MaxDist = maxDist,
 			DirX = dir.X, DirY = dir.Y, DirZ = dir.Z, ActionType = -1,
 			Radius = radius,
