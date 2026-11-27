@@ -3,6 +3,7 @@
     "0": "Air",
     "1": "Void",
     "2048": "Stone",
+    "2049": "Wood",
     "4096": "Seed_1",
     "4097": "Growable_stalk_1",
     "4098": "stalk_1",

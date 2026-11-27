@@ -9,7 +9,9 @@ public static class WorldGenerator
     private const ushort WATER_IDX = 8193;
     private const ushort DIRT_IDX = 6144;
     private const ushort STONE_IDX = 2048;
+    private const ushort WOOD_IDX = 2049;
     private const ushort AIR_IDX = 0;
+    private const ushort IGNORE_IDX = ushort.MaxValue;
 
     private static int CoordsToNo(Vector3I coords, Vector3I size)
     {
@@ -40,8 +42,17 @@ public static class WorldGenerator
         toTable[4 * toNumber + 3] = fromTable[4 * fromNumber + 3];
     }
 
-    private static bool PasteModel(ushort[] world, Vector3I gridSize, Vector3I position, Model model, ushort[] allowedSpawnBlockTypes, ushort[] allowedReplaceBlockTypes)
+    private static bool PasteModel(
+        ushort[] world,
+        Vector3I gridSize,
+        Vector3I position,
+        Model model,
+        ushort[] allowedSpawnBlockTypes,
+        ushort[] allowedReplaceBlockTypes,
+        ushort[] ignoreCopyBlockTypes
+    )
     {
+        ignoreCopyBlockTypes = [..ignoreCopyBlockTypes, IGNORE_IDX];
         ushort spawnBlock = world[4 * CoordsToNo(position-model.origin, gridSize)];
         if (!BlockInBlockList(spawnBlock, allowedSpawnBlockTypes)) return false;
 
@@ -77,6 +88,7 @@ public static class WorldGenerator
                     int noModel = CoordsToNo(coordsModel, model.size);
 
                     if (!BlockInBlockList(world[4 * noWorld], allowedReplaceBlockTypes)) continue;
+                    if (BlockInBlockList(model.data[4 * noModel], ignoreCopyBlockTypes)) continue;
                     CopyBlock(world, noWorld, model.data, noModel);
                 }
             }
@@ -85,7 +97,17 @@ public static class WorldGenerator
         return true;
     }
 
-    public static void ScatterModel(ushort[] world, Vector3I gridSize, Model model, int count, int verticalOffset, int[,] heightMap, ushort[] allowedSpawnBlockTypes, ushort[] allowedReplaceBlockTypes)
+    public static void ScatterModel(
+        ushort[] world,
+        Vector3I gridSize,
+        Model model,
+        int count,
+        int verticalOffset,
+        int[,] heightMap,
+        ushort[] allowedSpawnBlockTypes,
+        ushort[] allowedReplaceBlockTypes,
+        ushort[] ignoreCopyBlockTypes
+    )
     {
         var random = new Random();
         for (int i = 0; i < count; ++i)
@@ -93,7 +115,7 @@ public static class WorldGenerator
             int x = random.Next() % heightMap.GetLength(0);
             int z = random.Next() % heightMap.GetLength(1);
             var position = new Vector3I(x, heightMap[x, z] + verticalOffset, z);
-            if (!PasteModel(world, gridSize, position, model, allowedSpawnBlockTypes, allowedReplaceBlockTypes)) --i;
+            if (!PasteModel(world, gridSize, position, model, allowedSpawnBlockTypes, allowedReplaceBlockTypes, ignoreCopyBlockTypes)) --i;
         }
     }
 
@@ -138,13 +160,30 @@ public static class WorldGenerator
         }
 
         // Generate Perimeter Fence
-        // Todo: implement
+        // Todo: fix
+        var fencePicketSize = new Vector3I(1, 20, 5);
+        var fencePicketData = new ushort[4 * (int)fencePicketSize.Length()];
+        for (int i = 0; i < (int)fencePicketSize.Length(); ++i) fencePicketData[4*i] = WOOD_IDX;
+        var fencePicket = new Model(
+            new Vector3I(1, 5, 2),
+            fencePicketSize,
+            fencePicketData
+        );
+        var startPosition = new Vector2I(2, 2);
+        var offset = new Vector2I(7, 0);
+        for (int i = 0; i < 5; ++i)
+        {
+            Vector2I xz = startPosition + offset * i;
+            var position = new Vector3I(xz.X, heightMap[xz.X, xz.Y]+1, xz.Y);
+            GD.PrintS(position);
+            PasteModel(world, gridSize, position, fencePicket, [AIR_IDX], [AIR_IDX], []);
+        }
 
         // Generate Lampposts
         // Todo: implement
 
         // Scatter rocks
-        // Todo: fix
+        // Todo: add new models
         var rock_test = new Model(
             new Vector3I(1, 1, 1),
             new Vector3I(3, 3, 3),
@@ -162,8 +201,8 @@ public static class WorldGenerator
                 AIR_IDX  ,0,0,0, STONE_IDX,0,0,0, STONE_IDX,0,0,0
             ]
         );
-        // PasteModel(world, gridSize, new Vector3I(128, 64, 128), rock_test, [AIR_IDX, DIRT_IDX, WATER_IDX], [AIR_IDX, DIRT_IDX, WATER_IDX]);
-        ScatterModel(world, gridSize, rock_test, 20, 1, heightMap, [AIR_IDX, DIRT_IDX, WATER_IDX], [AIR_IDX, DIRT_IDX, WATER_IDX]);
+        // PasteModel(world, gridSize, new Vector3I(128, 64, 128), rock_test, [AIR_IDX, DIRT_IDX, WATER_IDX], [AIR_IDX, DIRT_IDX, WATER_IDX], []);
+        ScatterModel(world, gridSize, rock_test, 20, 1, heightMap, [AIR_IDX, DIRT_IDX, WATER_IDX], [AIR_IDX, DIRT_IDX, WATER_IDX], []);
 
         // var random_size = new Vector3I(20, 20, 20);
         // var random_len = random_size.X * random_size.Y * random_size.Z;

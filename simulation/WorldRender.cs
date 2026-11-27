@@ -25,7 +25,7 @@ public partial class WorldRender : Node3D
 	
 	//  -World size
 	private const int _chunkWidth = 32, _chunkDepth = 32, _chunkHeight = 32;
-	private const int _gridWidth = 256, _gridDepth = 256, _gridHeight = 128;
+	private const int _gridWidth = 128, _gridDepth = 128, _gridHeight = 128;
 	private const int _minTerrainHeight = 10, _maxTerrainHeight = 60;
 	private const float _waterPercentage = 0.4f;
 	
