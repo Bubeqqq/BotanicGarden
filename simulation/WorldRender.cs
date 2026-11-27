@@ -91,6 +91,10 @@ public partial class WorldRender : Node3D
     private readonly byte[] _interactPushBytes = new byte[Marshal.SizeOf<InteractionPushConstant>()];
     private Callable _onAnalysisCompletedCallable;
     
+	//Analysis
+	public event Action<GardenAnalysisSnapshot> AnalysisUpdated;
+	public GardenAnalysisSnapshot LatestAnalysis { get; private set; }
+	private double _totalSimTime = 0.0;
     //FPS counter
     
     private double _fpsAccumTime = 0.0;
@@ -385,18 +389,74 @@ public partial class WorldRender : Node3D
 		_displayTexB = new Texture3Drd { TextureRdRid = _texB };
 		_material.SetShaderParameter("image", _displayTexA);
 	}
- 
-    private void OnAnalysisCompleted(byte[] rawBytes)
-    {
-        ReadOnlySpan<uint> voxelCounts = MemoryMarshal.Cast<byte, uint>(rawBytes);
+	private static int GetStageIndex(uint voxelCount) => voxelCount switch
+	{
+		<= 4 => 0,   // Very Small
+		<= 15 => 1,  // Small
+		<= 45 => 2,  // Medium
+		_ => 3       // Big
+	};  
+	private void OnAnalysisCompleted(byte[] rawBytes)
+	{
+		ReadOnlySpan<uint> voxelCounts = MemoryMarshal.Cast<byte, uint>(rawBytes);
+		var aggregated = new Dictionary<uint, (int plants, long voxels, int[] stages)>();
 
-        for (int i = 0; i < 10; i++)
-        {
-            uint packed = voxelCounts[i];
-            //GD.Print($"Voxele o indeksie {i}: Count: {packed & 0x1FFFFFu}, Gatunek: {packed >> 21}");
-        }
-        GD.Print();
-    }
+		int totalPlants = 0;
+		long totalVoxels = 0;
+		uint maxVoxels = 0;
+		uint maxSpecies = 0;
+
+		for (int i = 0; i < voxelCounts.Length; i++)
+		{
+			uint packed = voxelCounts[i];
+			uint count = packed & 0x1FFFFFu;
+			if (count == 0) continue;
+
+			uint species = packed >> 21;
+			totalPlants++;
+			totalVoxels += count;
+
+			if (count > maxVoxels)
+			{
+				maxVoxels = count;
+				maxSpecies = species;
+			}
+
+			int stage = GetStageIndex(count);
+
+			if (aggregated.TryGetValue(species, out var current))
+			{
+				current.stages[stage]++;
+				aggregated[species] = (current.plants + 1, current.voxels + count, current.stages);
+			}
+			else
+			{
+				var stages = new int[4];
+				stages[stage] = 1;
+				aggregated[species] = (1, count, stages);
+			}
+		}
+
+		var bySpecies = new Dictionary<uint, SpeciesStats>(aggregated.Count);
+		foreach (var (speciesId, data) in aggregated)
+		{
+			bySpecies[speciesId] = new SpeciesStats(speciesId, data.plants, data.voxels, data.stages);
+		}
+
+		LatestAnalysis = new GardenAnalysisSnapshot
+		{
+			SimTimeSeconds = _totalSimTime,
+			TotalPlants = totalPlants,
+			TotalPlantVoxels = totalVoxels,
+			Fps = _currentFps,
+			SimStepsPerSec = _currentSimStepsPerSec,
+			LargestPlantSpeciesId = maxSpecies,
+			LargestPlantVoxels = maxVoxels,
+			BySpecies = bySpecies
+		};
+
+		AnalysisUpdated?.Invoke(LatestAnalysis);
+	}
     
 	public override void _Process(double delta)
     {
@@ -422,6 +482,7 @@ public partial class WorldRender : Node3D
             _timer -= _timePerSimulation;
             _frameTimer += 1;
             _simStepsCounter++;
+			_totalSimTime += _timePerSimulation;
         }
         else
         {

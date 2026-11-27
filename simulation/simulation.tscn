@@ -3,6 +3,9 @@
 [ext_resource type="Script" uid="uid://cormhnbxqsamo" path="res://simulation/WorldRender.cs" id="1_nsnmm"]
 [ext_resource type="Script" uid="uid://cglb3aafrshxo" path="res://player/CameraMovement.cs" id="2_qcdiq"]
 [ext_resource type="Script" uid="uid://clw20tbsvo5y1" path="res://ui/block_selector/BlockSelectorUI.cs" id="3_brcob"]
+[ext_resource type="Script" uid="uid://d05tc350nkj7y" path="res://analysis/AnalysisPanel.cs" id="4_iwi17"]
+[ext_resource type="Script" uid="uid://hioeabmt7nqg" path="res://analysis/PopulationChart.cs" id="5_3bcky"]
+[ext_resource type="Script" uid="uid://caq52081cvnew" path="res://analysis/MaturityHistogram.cs" id="6_of0dj"]
 
 [node name="World" type="Node3D" unique_id=1069929063]
 script = ExtResource("1_nsnmm")
@@ -91,3 +94,57 @@ size_flags_horizontal = 3
 [node name="BlocksList" type="ItemList" parent="Player/CanvasLayer/BlockSelectorUI/HBoxContainer" unique_id=565190624]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="AnalysisPanel" type="PanelContainer" parent="Player/CanvasLayer" unique_id=1162108446 node_paths=PackedStringArray("WorldRender", "Camera", "SummaryLabel", "ModeButton", "SpeciesList", "Chart", "Histogram", "GrowthWindowOption")]
+custom_minimum_size = Vector2(600, 200)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -100.0
+offset_right = 300.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("4_iwi17")
+WorldRender = NodePath("../../..")
+Camera = NodePath("../..")
+SummaryLabel = NodePath("MarginContainer/VBoxContainer/HeaderRow/SummaryLabel")
+ModeButton = NodePath("MarginContainer/VBoxContainer/HeaderRow/ModeButton")
+SpeciesList = NodePath("MarginContainer/VBoxContainer/SepciesList")
+Chart = NodePath("MarginContainer/VBoxContainer/Chart")
+Histogram = NodePath("MarginContainer/VBoxContainer/Histogram")
+GrowthWindowOption = NodePath("MarginContainer/VBoxContainer/HeaderRow/GrowthWindowOptionButton")
+
+[node name="MarginContainer" type="MarginContainer" parent="Player/CanvasLayer/AnalysisPanel" unique_id=422007040]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Player/CanvasLayer/AnalysisPanel/MarginContainer" unique_id=406727752]
+layout_mode = 2
+
+[node name="HeaderRow" type="HBoxContainer" parent="Player/CanvasLayer/AnalysisPanel/MarginContainer/VBoxContainer" unique_id=1928165372]
+layout_mode = 2
+
+[node name="SummaryLabel" type="Label" parent="Player/CanvasLayer/AnalysisPanel/MarginContainer/VBoxContainer/HeaderRow" unique_id=684426063]
+layout_mode = 2
+
+[node name="ModeButton" type="Button" parent="Player/CanvasLayer/AnalysisPanel/MarginContainer/VBoxContainer/HeaderRow" unique_id=1517609996]
+layout_mode = 2
+text = "Mode: Plant Count"
+
+[node name="GrowthWindowOptionButton" type="OptionButton" parent="Player/CanvasLayer/AnalysisPanel/MarginContainer/VBoxContainer/HeaderRow" unique_id=1372221380]
+layout_mode = 2
+
+[node name="SepciesList" type="VBoxContainer" parent="Player/CanvasLayer/AnalysisPanel/MarginContainer/VBoxContainer" unique_id=1066127744]
+layout_mode = 2
+
+[node name="Chart" type="Control" parent="Player/CanvasLayer/AnalysisPanel/MarginContainer/VBoxContainer" unique_id=1632360878]
+layout_mode = 2
+script = ExtResource("5_3bcky")
+
+[node name="Histogram" type="Control" parent="Player/CanvasLayer/AnalysisPanel/MarginContainer/VBoxContainer" unique_id=397580455]
+custom_minimum_size = Vector2(600, 180)
+layout_mode = 2
+script = ExtResource("6_of0dj")
